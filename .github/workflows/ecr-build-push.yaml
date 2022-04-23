@@ -97,7 +97,6 @@ jobs:
           target: ${{ matrix.target }}
           build-args: ${{ inputs.build-args }}
           push: true
-          load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
@@ -107,6 +106,8 @@ jobs:
 
       - name: 'Set latest tag'
         if: ${{ inputs.tag-latest }}
-        run: |
-          docker tag ${{ inputs.registry }}/${{ matrix.target }}:${{ steps.git-meta.outputs.short-sha }} ${{ inputs.registry }}/${{ matrix.target }}:latest
-          docker push ${{ inputs.registry }}/${{ matrix.target }}:latest
+        # v2 (2.0.0) @ 28 Sep 2021 https://github.com/akhilerm/tag-push-action/tags
+        uses: akhilerm/tag-push-action@f973043dc002b8e5a772c53e79441e6e1861e874
+        with:
+          src: ${{ inputs.registry }}/${{ matrix.target }}:${{ steps.git-meta.outputs.short-sha }}
+          dst: ${{ inputs.registry }}/${{ matrix.target }}:latest
