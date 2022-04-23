@@ -35,6 +35,11 @@ on:
         description: Footer in the notification
         type: string
         required: false
+      notification-success-statement:
+        description: Positive statement for the success notification
+        type: string
+        required: false
+        default: '{0} fixed the build!'
     secrets:
       slack-webhook:
         description: Slack Webhook URL
@@ -144,7 +149,7 @@ jobs:
           status: ${{ inputs.status }}
           notification_title: '✅ ${{ inputs.notification-title }} <{repo_url}/tree/${{ inputs.branch-name }}|${{ inputs.branch-name }}>'
           message_format: |
-            *SUCCESS* @ <{run_url}|${{ steps.git-meta.outputs.commit-title }}> - ${{ github.event.head_commit.author.name }} fixed the build! ${{ (steps.latest_success.outputs.status && 'unknown') || format('(broken since {0})', fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp) }}
+            *SUCCESS* @ <{run_url}|${{ steps.git-meta.outputs.commit-title }}> - ${{ format(inputs.notification-success-statement, github.event.head_commit.author.name) }} ${{ (steps.latest_success.outputs.status && '(first run)') || format('(broken since {0})', fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp) }}
           footer: ${{ inputs.notification-footer }}
         env:
           SLACK_WEBHOOK_URL: '${{ secrets.slack-webhook }}'
