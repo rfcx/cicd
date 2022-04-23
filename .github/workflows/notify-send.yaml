@@ -76,7 +76,8 @@ jobs:
         id: latest_success
         uses: octokit/request-action@7e93b91076fad3920c29d44eb2a6311d929db3dd
         # v2 (2.1.0) @ 03 Dec 2021 https://github.com/octokit/request-action/tags
-        if: steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
+        if: |
+          !inputs.previous-run-id || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
         with:
           # https://docs.github.com/en/rest/reference/actions#list-workflow-runs
           route: GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs
