@@ -49,7 +49,6 @@ jobs:
       - name: 'Setup: Git checkout'
         # v3 (3.0.0) @ 02 Mar 2022 https://github.com/actions/checkout/tags
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
-        if: always()
 
       # -------------------------------------------------- #
       # ALWAYS RUNS                                        #
@@ -69,7 +68,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github-token }}
 
       - name: 'Notify: Log if no previous run conclusion'
-        if: always() && steps.latest_run_conclusion.outputs.status != 200
+        if: steps.latest_run_conclusion.outputs.status
         run: |
           echo "Previous run status: ${{ steps.latest_run_conclusion.outputs.status }}"
 
@@ -77,7 +76,7 @@ jobs:
         id: latest_success
         uses: octokit/request-action@7e93b91076fad3920c29d44eb2a6311d929db3dd
         # v2 (2.1.0) @ 03 Dec 2021 https://github.com/octokit/request-action/tags
-        if: always() && steps.latest_run_conclusion.outputs.status == 200 && fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
+        if: always() && !steps.latest_run_conclusion.outputs.status && fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
         with:
           # https://docs.github.com/en/rest/reference/actions#list-workflow-runs
           route: GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs
@@ -91,14 +90,13 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github-token }}
 
       - name: 'Notify: Log date of latest successful run'
-        if: always() && steps.latest_run_conclusion.outputs.status == 200 && fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
+        if: always() && !steps.latest_run_conclusion.outputs.status && fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
         run: |
           echo ${{ fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp }}
 
       - name: 'Notify: Get Slack User'
         uses: kanga333/variable-mapper@92703696e9a3f370901c3d53ae3836569b1055e5
         # v0 (0.2.2) @ 03 Nov 2021 https://github.com/kanga333/variable-mapper/tags
-        if: always()
         with:
           key: '${{ github.event.sender.login }}'
           map: |
@@ -121,7 +119,7 @@ jobs:
         # v1 (1.9.0) @ 30 Mar 2022 https://github.com/ravsamhq/notify-slack-action/tags
         uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
         # Notify failure if previous run was not also a failure
-        if: always() && (steps.latest_run_conclusion.outputs.status != 200 || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'failure')
+        if: always() && (steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'failure')
         with:
           notify_when: 'failure,warning'
           status: ${{ inputs.status }}
@@ -137,7 +135,7 @@ jobs:
         # v1 (1.9.0) @ 30 Mar 2022 https://github.com/ravsamhq/notify-slack-action/tags
         uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
         # Notify success if previous run was not also a success
-        if: always() && steps.latest_run_conclusion.outputs.status == 200 && fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
+        if: always() && (steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success')
         with:
           notify_when: 'success'
           status: ${{ inputs.status }}
