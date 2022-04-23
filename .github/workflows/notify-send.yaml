@@ -141,7 +141,7 @@ jobs:
           status: ${{ inputs.status }}
           notification_title: '✅ ${{ inputs.notification-title }} <{repo_url}/tree/${{ inputs.branch-name }}|${{ inputs.branch-name }}>'
           message_format: |
-            *SUCCESS* @ <{run_url}|${{ steps.git-meta.outputs.commit-title }}> - ${{ github.event.head_commit.author.name }} fixed the build! ${{ (steps.latest_success.outputs.status && 'unknown') || ('(broken since ' + fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp + ')' }}
+            *SUCCESS* @ <{run_url}|${{ steps.git-meta.outputs.commit-title }}> - ${{ github.event.head_commit.author.name }} fixed the build! ${{ (steps.latest_success.outputs.status && 'unknown') || format('(broken since {0})', fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp) }}
           footer: ${{ inputs.notification-footer }}
         env:
           SLACK_WEBHOOK_URL: '${{ secrets.slack-webhook }}'
