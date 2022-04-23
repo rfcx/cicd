@@ -120,7 +120,8 @@ jobs:
         # v1 (1.9.0) @ 30 Mar 2022 https://github.com/ravsamhq/notify-slack-action/tags
         uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
         # Notify failure if previous run was not also a failure
-        if: steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'failure'
+        if: |
+          !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'failure'
         with:
           notify_when: 'failure,warning'
           status: ${{ inputs.status }}
@@ -136,7 +137,8 @@ jobs:
         # v1 (1.9.0) @ 30 Mar 2022 https://github.com/ravsamhq/notify-slack-action/tags
         uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
         # Notify success if previous run was not also a success
-        if: steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
+        if: |
+          !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
         with:
           notify_when: 'success'
           status: ${{ inputs.status }}
