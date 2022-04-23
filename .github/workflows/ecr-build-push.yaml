@@ -97,6 +97,7 @@ jobs:
           target: ${{ matrix.target }}
           build-args: ${{ inputs.build-args }}
           push: true
+          load: true
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
