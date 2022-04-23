@@ -27,6 +27,11 @@ on:
         description: Current workflow status
         type: string
         required: true
+      always:
+        description: Always send notification
+        type: boolean
+        required: false
+        default: false
       notification-title:
         description: Title in the notification
         type: string
@@ -126,7 +131,7 @@ jobs:
         uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
         # Notify failure if previous run was not also a failure
         if: |
-          !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'failure'
+          inputs.always || !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'failure'
         with:
           notify_when: 'failure,warning'
           status: ${{ inputs.status }}
@@ -143,7 +148,7 @@ jobs:
         uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
         # Notify success if previous run was not also a success
         if: |
-          !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
+          inputs.always || !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
         with:
           notify_when: 'success'
           status: ${{ inputs.status }}
