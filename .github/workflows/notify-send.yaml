@@ -68,7 +68,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github-token }}
 
       - name: 'Notify: Log if no previous run conclusion'
-        if: steps.latest_run_conclusion.outputs.status
+        if: always() && steps.latest_run_conclusion.outputs.status
         run: |
           echo "Previous run status: ${{ steps.latest_run_conclusion.outputs.status }}"
 
