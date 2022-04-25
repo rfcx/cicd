@@ -101,7 +101,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github-token }}
 
       - name: 'Notify: Log date of latest successful run'
-        if: '!steps.latest_success.outputs.status'
+        if: always() && fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
         run: |
           echo ${{ fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp }}
 
