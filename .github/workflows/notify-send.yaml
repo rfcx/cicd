@@ -78,7 +78,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github-token }}
 
       - name: 'Notify: Log if no previous run conclusion'
-        if: steps.latest_run_conclusion.outputs.status
+        if: inputs.previous-run-id && steps.latest_run_conclusion.outputs.status != 200
         run: |
           echo "Previous run status: ${{ steps.latest_run_conclusion.outputs.status }}"
 
@@ -101,9 +101,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.github-token }}
 
       - name: 'Notify: Log date of latest successful run'
-        if: '!steps.latest_success.outputs.status'
+        if: steps.latest_success.outputs.status == 200
         run: |
-          echo ${{ fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp }}
+          echo ${{ (fromJson(steps.latest_success.outputs.data).workflow_runs.length == 0 && 'No runs') || fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp }}
 
       - name: 'Notify: Get Slack User'
         uses: kanga333/variable-mapper@92703696e9a3f370901c3d53ae3836569b1055e5
@@ -131,7 +131,7 @@ jobs:
         uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
         # Notify failure if previous run was not also a failure
         if: |
-          inputs.always || !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'failure'
+          inputs.always || !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status != 200 || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'failure'
         with:
           notify_when: 'failure,warning'
           status: ${{ inputs.status }}
@@ -148,13 +148,13 @@ jobs:
         uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
         # Notify success if previous run was not also a success
         if: |
-          inputs.always || !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
+          inputs.always || !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status != 200 || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
         with:
           notify_when: 'success'
           status: ${{ inputs.status }}
           notification_title: '✅ ${{ inputs.notification-title }} <{repo_url}/tree/${{ inputs.branch-name }}|${{ inputs.branch-name }}>'
           message_format: |
-            *SUCCESS* @ <{run_url}|${{ steps.git-meta.outputs.commit-title }}> - ${{ format(inputs.notification-success-statement, github.event.head_commit.author.name) }} ${{ (steps.latest_success.outputs.status && '(first run)') || format('(broken since {0})', fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp) }}
+            *SUCCESS* @ <{run_url}|${{ steps.git-meta.outputs.commit-title }}> - ${{ format(inputs.notification-success-statement, github.event.head_commit.author.name) }} ${{ ((steps.latest_success.outputs.status != 200 || fromJson(steps.latest_success.outputs.data).workflow_runs.length == 0) && '(first run)') || format('(broken since {0})', fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp) }}
           footer: ${{ inputs.notification-footer }}
         env:
           SLACK_WEBHOOK_URL: '${{ secrets.slack-webhook }}'
