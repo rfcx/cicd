@@ -19,7 +19,7 @@ on:
         description: KUBE_CONFIG file
         required: true
 jobs:
-  build:
+  deploy:
     runs-on: ${{ inputs.runs-on }}
     steps:
       - name: 'Setup: Git checkout'

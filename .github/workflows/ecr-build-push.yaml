@@ -21,22 +21,22 @@ on:
         type: string
         default: 'Dockerfile'
         required: false
+      build-args:
+        description: Build arguments to pass to Docker build
+        type: string
+        required: false
       targets:
         description: Array of targets to build from the dockerfile
         type: string
         required: true
-      tag:
-        description: Image tag
+      tag-environment:
+        description: Image tag containing the environment (e.g. production)
         type: string
         required: true
       tag-latest:
         description: Add the `latest` tag to the image
         type: boolean
         default: false
-        required: false
-      build-args:
-        description: Build arguments to pass to Docker build
-        type: string
         required: false
     secrets:
       aws-access-key-id:
@@ -49,6 +49,9 @@ on:
       short-sha: 
         description: Git commit short SHA
         value: ${{ jobs.build.outputs.short-sha }}
+      unique-tag:
+        description: Unique tag used for deployment
+        value: ${{ inputs.tag-environment }}-${{ jobs.build.outputs.short-sha }}
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
@@ -100,14 +103,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           tags: |
-            ${{ inputs.registry }}/${{ matrix.target }}:${{ inputs.tag }}
+            ${{ inputs.registry }}/${{ matrix.target }}:${{ inputs.tag-environment }}
             ${{ inputs.registry }}/${{ matrix.target }}:${{ github.run_number }}
             ${{ inputs.registry }}/${{ matrix.target }}:${{ steps.git-meta.outputs.short-sha }}
+            ${{ inputs.registry }}/${{ matrix.target }}:${{ inputs.tag-environment }}-${{ jobs.build.outputs.short-sha }}
 
       - name: 'Set latest tag'
         if: ${{ inputs.tag-latest }}
         # v2 (2.0.0) @ 28 Sep 2021 https://github.com/akhilerm/tag-push-action/tags
         uses: akhilerm/tag-push-action@f973043dc002b8e5a772c53e79441e6e1861e874
         with:
-          src: ${{ inputs.registry }}/${{ matrix.target }}:${{ steps.git-meta.outputs.short-sha }}
+          src: ${{ inputs.registry }}/${{ matrix.target }}:${{ inputs.tag-environment }}-${{ steps.git-meta.outputs.short-sha }}
           dst: ${{ inputs.registry }}/${{ matrix.target }}:latest
