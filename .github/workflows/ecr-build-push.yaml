@@ -46,7 +46,7 @@ on:
         description: AWS Secret Access Key
         required: true
     outputs:
-      short-sha: 
+      short-sha:
         description: Git commit short SHA
         value: ${{ jobs.build.outputs.short-sha }}
       unique-tag:
@@ -102,8 +102,8 @@ jobs:
           target: ${{ matrix.target }}
           build-args: ${{ inputs.build-args }}
           push: true
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # cache-from: type=gha
+          # cache-to: type=gha,mode=max
           tags: |
             ${{ inputs.registry }}/${{ matrix.target }}:${{ inputs.tag-environment }}
             ${{ inputs.registry }}/${{ matrix.target }}:${{ github.run_number }}
