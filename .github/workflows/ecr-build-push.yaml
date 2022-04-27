@@ -106,7 +106,7 @@ jobs:
             ${{ inputs.registry }}/${{ matrix.target }}:${{ inputs.tag-environment }}
             ${{ inputs.registry }}/${{ matrix.target }}:${{ github.run_number }}
             ${{ inputs.registry }}/${{ matrix.target }}:${{ steps.git-meta.outputs.short-sha }}
-            ${{ inputs.registry }}/${{ matrix.target }}:${{ inputs.tag-environment }}-${{ jobs.build.outputs.short-sha }}
+            ${{ inputs.registry }}/${{ matrix.target }}:${{ inputs.tag-environment }}-${{ steps.git-meta.outputs.short-sha }}
 
       - name: 'Set latest tag'
         if: ${{ inputs.tag-latest }}
