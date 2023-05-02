@@ -59,7 +59,7 @@ jobs:
         run: |
           SECRETS_CONTEXT="${{ toJson(secrets) }}"
           input_json=$SECRETS_CONTEXT
-          echo ${{ environment }}
+          echo ${{ inputs.envmnt }}
           if [ -n "$input_json" ]; then
             create=("kubectl" "create" "secret" "generic" "database-vars")
             delete=("kubectl" "delete" "secret" "--ignore-not-found" "database-vars")
