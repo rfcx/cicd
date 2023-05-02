@@ -1,0 +1,79 @@
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: Platform to execute on
+        type: string
+        default: ubuntu-latest
+        required: false
+      tag: 
+        description: Image tag to deploy
+        type: string
+        required: true
+      namespace:
+        description: Kubernetes namespace
+        type: string
+        required: true
+    secrets:
+#      kube-config:
+#        description: KUBE_CONFIG file
+#        required: true
+      aws-access-key-id:
+        description: AWS Access Key ID
+        required: true
+      aws-secret-access-key:
+        description: AWS Secret Access Key
+        required: true
+jobs:
+  build:
+    runs-on: ${{ inputs.runs-on }}
+    environment: "staging"
+    #${{ inputs.environment }}
+    steps:
+
+      - name: 'Setup: Configure AWS credentials'
+        # v1 (1.6.1) @ 19 Jan 2022 https://github.com/aws-actions/configure-aws-credentials/tags
+        uses: aws-actions/configure-aws-credentials@05b148adc31e091bafbaf404f745055d4d3bc9d2
+        with:
+          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          aws-region: eu-west-1
+
+      - name: 'Get Kubeconf EKS'
+        run: |
+          aws eks update-kubeconfig --region us-east-1 --name eks-cluster-test
+#          kubectl config get-contexts
+#          kubectl config use-context arn:aws:eks:us-east-1:887044485231:cluster/eks-cluster-test
+#          export KUBE_CONFIG=$(cat ~/.kube/config | base64)
+
+#          kubectl config get-contexts
+#          kubectl config use-context arn:aws:eks:us-east-1:408859747768:cluster/eks-cluster-nonprod
+#          kubectl config use-context arn:aws:eks:us-east-1:887044485231:cluster/eks-cluster-test
+
+      - name: 'Setup: Git checkout'
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
+
+      - name: getsecrets
+        run: |
+          SECRETS_CONTEXT="${{ toJson(secrets) }}"
+          input_json=$SECRETS_CONTEXT
+          echo $input_json
+          if [ -n "$input_json" ]; then
+            create=("kubectl" "create" "secret" "generic" "database-vars")
+            delete=("kubectl" "delete" "secret" "--ignore-not-found" "database-vars")
+            while read -r key value; do
+              create+=("--from-literal" "${key}=${value}")
+            done < <(echo "$input_json" | jq -r 'to_entries[] | "\(.key) \(.value)"')
+            "${delete[@]}"
+            "${create[@]}"
+          else
+            echo "SECRETS_EXPORT environment variable not set"
+          fi
+
+#      - name: 'Deploy: Kubernetes apply'
+#        run: |
+#          kubectl delete -R -f build/${{ inputs.namespace }} --ignore-not-found=true -n${{ inputs.namespace }} --grace-period=10
+#          kubectl apply -R -f build/${{ inputs.namespace }} -n${{ inputs.namespace }}
+
+
+
