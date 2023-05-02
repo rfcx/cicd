@@ -68,6 +68,7 @@ jobs:
             done < <(echo "$input_json" | jq -r 'to_entries[] | "\(.key) \(.value)"')
             "${delete[@]}"
             "${create[@]}"
+            echo "11"
           else
             echo "SECRETS_EXPORT environment variable not set"
           fi
