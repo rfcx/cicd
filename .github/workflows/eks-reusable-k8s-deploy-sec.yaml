@@ -23,10 +23,10 @@ on:
 #        required: true
       aws-access-key-id:
         description: AWS Access Key ID
-        required: true
+        required: false
       aws-secret-access-key:
         description: AWS Secret Access Key
-        required: true
+        required: false
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
