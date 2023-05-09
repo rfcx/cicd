@@ -45,8 +45,10 @@ jobs:
 
       - name: getsecrets
         run: |
+          jq --version
           SECRETS_CONTEXT="${{ toJson(secrets) }}"
           input_json=$SECRETS_CONTEXT
+          
           if [ -n "$input_json" ]; then
             delete=("kubectl" "delete" "secret" "--ignore-not-found" "database-vars")
             create=("kubectl" "create" "secret" "generic" "database-vars")
