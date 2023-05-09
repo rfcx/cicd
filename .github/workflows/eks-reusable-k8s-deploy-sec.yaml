@@ -53,9 +53,7 @@ jobs:
             create=("kubectl" "create" "secret" "generic" "database-vars")
 
             while read -r key value; do
-              trimmed_key=$(echo "$key" | tr -d '," ')
-              trimmed_value=$(echo "$value" | tr -d '," ')
-              create+=("--from-literal"="${trimmed_key}='${trimmed_value}'")
+              create+=("--from-literal"="${key}=${value}")
             done < <(echo "$input_json" | jq -r 'to_entries[] | "\(.key):\(.value)"')
             
             echo "${create[@]}"
