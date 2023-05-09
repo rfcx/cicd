@@ -46,7 +46,8 @@ jobs:
       - name: getsecrets
         env: 
           input_json: ${{ toJson(secrets) }}
-        run: |      
+        run: |
+          echo $input_json     
           if [ -n "$input_json" ]; then
             delete=("kubectl" "delete" "secret" "--ignore-not-found" "database-vars")
             create=("kubectl" "create" "secret" "generic" "database-vars")
