@@ -54,10 +54,10 @@ jobs:
             while read -r key value; do
               create+=("--from-literal" "${key}=${value}")
             done < <(echo "$input_json" | jq -r 'to_entries[] | "\(.key) \(.value)"')
-            echo "${create[@]}"
           else
             echo "SECRETS_EXPORT environment variable not set"
           fi
+          echo "${create[@]}"
 #      - name: 'Deploy: Kubernetes apply'
 #        run: |
 #          kubectl delete -R -f build/${{ inputs.namespace }} --ignore-not-found=true -n${{ inputs.namespace }} --grace-period=10
