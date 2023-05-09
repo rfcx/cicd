@@ -45,9 +45,7 @@ jobs:
 
       - name: getsecrets
         run: |
-          jq --version
-          SECRETS_CONTEXT="${{ toJson(secrets) }}"
-          input_json=$SECRETS_CONTEXT
+          input_json="${{ toJson(secrets) }}"
           
           if [ -n "$input_json" ]; then
             delete=("kubectl" "delete" "secret" "--ignore-not-found" "database-vars")
