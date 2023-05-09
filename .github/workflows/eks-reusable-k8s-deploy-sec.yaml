@@ -44,9 +44,9 @@ jobs:
         uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846
 
       - name: getsecrets
-        run: |
-          input_json="${{ toJson(secrets) }}"
-                    
+        env: 
+          input_json: ${{ toJson(secrets) }}
+        run: |      
           if [ -n "$input_json" ]; then
             delete=("kubectl" "delete" "secret" "--ignore-not-found" "database-vars")
             create=("kubectl" "create" "secret" "generic" "database-vars")
