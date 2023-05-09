@@ -57,8 +57,7 @@ jobs:
               create+=("--from-literal" "${trimmed_key}=${trimmed_value}")
             done < <(echo "$input_json" | jq -r 'to_entries[] | "\(.key):\(.value)"')
             
-            "${delete[@]}"
-            "${create[@]}"
+            echo "${create[@]}"
           else
             echo "SECRET_CONTEXT environment variable not set"
           fi
