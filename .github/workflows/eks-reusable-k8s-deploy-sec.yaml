@@ -52,7 +52,7 @@ jobs:
             delete=("kubectl" "delete" "secret" "--ignore-not-found" "database-vars")
             create=("kubectl" "create" "secret" "generic" "database-vars")
 
-            while IFS=: read -r key value; do
+            while read -r key value; do
               trimmed_key=$(echo "$key" | tr -d '," ')
               trimmed_value=$(echo "$value" | tr -d '," ')
               create+=("--from-literal"="${trimmed_key}='${trimmed_value}'")
