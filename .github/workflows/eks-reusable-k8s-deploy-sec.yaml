@@ -46,7 +46,7 @@ jobs:
       - name: getsecrets
         run: |
           input_json="${{ toJson(secrets) }}"
-          
+                    
           if [ -n "$input_json" ]; then
             delete=("kubectl" "delete" "secret" "--ignore-not-found" "database-vars")
             create=("kubectl" "create" "secret" "generic" "database-vars")
@@ -56,11 +56,10 @@ jobs:
               trimmed_value=$(echo "$value" | tr -d '," ')
               create+=("--from-literal" "${trimmed_key}=${trimmed_value}")
             done < <(echo "$input_json" | jq -r 'to_entries[] | "\(.key):\(.value)"')
-
+            
             echo "${create[@]}"
             echo "${delete[@]}"
-            "${delete[@]}"
-            "${create[@]}"
+            echo $input_json
           else
             echo "SECRET_CONTEXT environment variable not set"
           fi
