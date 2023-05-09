@@ -33,17 +33,17 @@ jobs:
     environment: ${{ inputs.envmnt }}
     steps:
 
-      - name: 'Setup: Configure AWS credentials'
-        # v1 (1.6.1) @ 19 Jan 2022 https://github.com/aws-actions/configure-aws-credentials/tags
-        uses: aws-actions/configure-aws-credentials@05b148adc31e091bafbaf404f745055d4d3bc9d2
-        with:
-          aws-access-key-id: ${{ secrets.aws-access-key-id }}
-          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
-          aws-region: eu-west-1
-
-      - name: 'Get Kubeconf EKS'
-        run: |
-          aws eks update-kubeconfig --region us-east-1 --name eks-cluster-test
+#      - name: 'Setup: Configure AWS credentials'
+#        # v1 (1.6.1) @ 19 Jan 2022 https://github.com/aws-actions/configure-aws-credentials/tags
+#        uses: aws-actions/configure-aws-credentials@05b148adc31e091bafbaf404f745055d4d3bc9d2
+#        with:
+#          aws-access-key-id: ${{ secrets.aws-access-key-id }}
+#          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+#          aws-region: eu-west-1
+#
+#      - name: 'Get Kubeconf EKS'
+#        run: |
+#          aws eks update-kubeconfig --region us-east-1 --name eks-cluster-test
 #          kubectl config get-contexts
 #          kubectl config use-context arn:aws:eks:us-east-1:887044485231:cluster/eks-cluster-test
 #          export KUBE_CONFIG=$(cat ~/.kube/config | base64)
@@ -66,8 +66,8 @@ jobs:
             while read -r key value; do
               create+=("--from-literal" "${key}=${value}")
             done < <(echo "$input_json" | jq -r 'to_entries[] | "\(.key) \(.value)"')
-            "${delete[@]}"
-            "${create[@]}"
+#            "${delete[@]}"
+#            "${create[@]}"
             echo "11"
           else
             echo "SECRETS_EXPORT environment variable not set"
