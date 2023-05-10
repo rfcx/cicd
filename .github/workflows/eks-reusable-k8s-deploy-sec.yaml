@@ -14,7 +14,7 @@ on:
         description: Kubernetes namespace
         type: string
         required: true
-      envmnt:
+      environment:
         required: true
         type: string
 #    secrets:
@@ -30,7 +30,7 @@ on:
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
-    environment: ${{ inputs.envmnt }}
+    environment: ${{ inputs.environment }}
     steps:
       - name: 'Setup: Configure AWS credentials'
         # v1 (1.6.1) @ 19 Jan 2022 https://github.com/aws-actions/configure-aws-credentials/tags
