@@ -49,7 +49,7 @@ jobs:
       - name: getsecrets
         env: 
           input_json: ${{ toJson(secrets) }}
-          secrets_list: ${{ inpits.secrets_list }}
+          secrets_list: ${{ inputs.secrets_list }}
           env: ${{ inputs.environment}}
         run: |
           IFS=',' read -ra secrets_array <<< "$secrets_list"
