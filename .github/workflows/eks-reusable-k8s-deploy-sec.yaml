@@ -49,8 +49,8 @@ jobs:
           create=("kubectl" "create" "secret" "generic" "$env")
           delete=("kubectl" "delete" "secret" "--ignore-not-found" "$env")
           for secret_key in "${secrets_array[@]}"; do
-            if [[ $secrets_context == *"$secret_key"* ]]; then
-              secret_value=$(echo "$secrets_context" | jq -r ".$secret_key")
+            if [[ $input_json == *"$secret_key"* ]]; then
+              secret_value=$(echo "$input_json" | jq -r ".$secret_key")
               create+=("--from-literal" "$secret_key=$secret_value")
             fi
           done
