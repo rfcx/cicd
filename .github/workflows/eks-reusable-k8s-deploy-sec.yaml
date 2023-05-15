@@ -46,8 +46,8 @@ jobs:
           env: ${{ inputs.environment}}
         run: |
           IFS=',' read -ra secrets_array <<< "$secrets_list"
-          create=("kubectl" "create" "secret" "generic" "$secret_name")
-          delete=("kubectl" "delete" "secret" "--ignore-not-found" "database-vars")
+          create=("kubectl" "create" "secret" "generic" "$env")
+          delete=("kubectl" "delete" "secret" "--ignore-not-found" "$env")
           for secret_key in "${secrets_array[@]}"; do
             if [[ $secrets_context == *"$secret_key"* ]]; then
               secret_value=$(echo "$secrets_context" | jq -r ".$secret_key")
