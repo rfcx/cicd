@@ -53,6 +53,7 @@ jobs:
               secret_value=$(echo "$secrets_context" | jq -r ".$secret_key")
               command+=("--from-literal" "$secret_key=$secret_value")
             fi
+          done
           echo "${create[@]}"
 #      - name: 'Deploy: Kubernetes apply'
 #        run: |
