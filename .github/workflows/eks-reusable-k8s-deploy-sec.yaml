@@ -51,7 +51,7 @@ jobs:
           for secret_key in "${secrets_array[@]}"; do
             if [[ $secrets_context == *"$secret_key"* ]]; then
               secret_value=$(echo "$secrets_context" | jq -r ".$secret_key")
-              command+=("--from-literal" "$secret_key=$secret_value")
+              create+=("--from-literal" "$secret_key=$secret_value")
             fi
           done
           echo "${create[@]}"
