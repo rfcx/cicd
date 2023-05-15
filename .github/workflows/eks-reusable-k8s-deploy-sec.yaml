@@ -54,7 +54,7 @@ jobs:
           secrets_list: ${{ inputs.secrets_list }}
           full_app_name: ${{ inputs.environment}}/${{ inputs.app_name}}
         run: |
-          echo %full_app_name
+          echo $full_app_name
           IFS=',' read -ra secrets_array <<< "$secrets_list"
           create=("kubectl" "create" "secret" "generic" "$full_app_name")
           delete=("kubectl" "delete" "secret" "--ignore-not-found" "$full_app_name")
