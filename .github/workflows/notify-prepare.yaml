@@ -56,4 +56,4 @@ jobs:
       - name: 'Setup: Output run ID'
         id: previous-run
         run: |
-          echo "::set-output name=id::${{ fromJson(steps.workflow-runs.outputs.data).workflow_runs[1].id }}"
+          echo "id=${{ fromJson(steps.workflow-runs.outputs.data).workflow_runs[1].id }} >> $GITHUB_OUTPUT"
