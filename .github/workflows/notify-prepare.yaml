@@ -20,10 +20,10 @@ on:
         description: GitHub Token
         required: true
     outputs:
-      branch-name: 
+      branch-name:
         description: Branch Name
         value: ${{ jobs.prepare.outputs.branch-name }}
-      previous-run-id: 
+      previous-run-id:
         description: Previous Run ID
         value: ${{ jobs.prepare.outputs.previous-run-id }}
 jobs:
@@ -37,11 +37,11 @@ jobs:
         id: branch
         run: |
           if [[ "${{ github.event_name }}" = "pull_request" ]]; then echo "::set-output name=branch-name::`echo ${GITHUB_HEAD_REF}`"; else echo "::set-output name=branch-name::`echo ${GITHUB_REF#refs/heads/}`"; fi
-          
+
       - name: 'Setup: Get ID of previous run' # Need to execute this early (before another run starts)
         id: workflow-runs
-        uses: octokit/request-action@7e93b91076fad3920c29d44eb2a6311d929db3dd
-        # v2 (2.1.0) @ 03 Dec 2021 https://github.com/octokit/request-action/tags
+        uses: octokit/request-action@v2.1.7
+        # v2 (2.1.7) @ 11 Oct 2022 https://github.com/octokit/request-action/tags
         with:
           # https://docs.github.com/en/rest/reference/actions#list-workflow-runs
           route: GET /repos/{owner}/{repo}/actions/workflows/{workflow_id}/runs
