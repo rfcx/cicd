@@ -20,9 +20,6 @@ on:
       secrets_list:
         required: true
         type: string
-      app_name:
-        required: true
-        type: string
 #    secrets:
 #      kube-config:
 #        description: KUBE_CONFIG file
@@ -52,13 +49,11 @@ jobs:
         env: 
           input_json: ${{ toJson(secrets) }}
           secrets_list: ${{ inputs.secrets_list }}
-#          full_app_name: ${{ inputs.environment}}/${{ inputs.app_name}}
-          full_app_name: ${{ inputs.environment}}
+          environment: ${{ inputs.environment}}
         run: |
-          echo $full_app_name
           IFS=',' read -ra secrets_array <<< "$secrets_list"
-          create=("kubectl" "create" "secret" "generic" "$full_app_name")
-          delete=("kubectl" "delete" "secret" "--ignore-not-found" "$full_app_name")
+          create=("kubectl" "create" "secret" "generic" "$environment")
+          delete=("kubectl" "delete" "secret" "--ignore-not-found" "$environment")
           for secret_key in "${secrets_array[@]}"; do
             if [[ $input_json == *"$secret_key"* ]]; then
               secret_value=$(echo "$input_json" | jq -r ".$secret_key")
