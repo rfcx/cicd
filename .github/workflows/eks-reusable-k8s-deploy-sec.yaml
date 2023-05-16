@@ -65,7 +65,8 @@ jobs:
               create+=("--from-literal" "$secret_key=$secret_value")
             fi
           done
-          echo "${create[@]}"
+          ${delete[@]}
+          ${create[@]}
 #      - name: 'Deploy: Kubernetes apply'
 #        run: |
 #          kubectl delete -R -f build/${{ inputs.namespace }} --ignore-not-found=true -n${{ inputs.namespace }} --grace-period=10
