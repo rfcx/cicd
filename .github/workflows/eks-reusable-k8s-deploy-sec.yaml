@@ -45,6 +45,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.aws_secret_access_key_nonprod_app_deploy }}
           aws-region: eu-west-1
 
+      - name: 'Get Kubeconf EKS'
+        run: |
+          aws eks update-kubeconfig --region eu-west-1 --name eks-cluster-nonprod         
+#          aws eks update-kubeconfig --region eu-west-1 --name ${{ vars.EKS_CLUSTER_NAME_NONPROD }}  
+
       - name: getsecrets
         env: 
           input_json: ${{ toJson(secrets) }}
