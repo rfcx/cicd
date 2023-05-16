@@ -52,7 +52,8 @@ jobs:
         env: 
           input_json: ${{ toJson(secrets) }}
           secrets_list: ${{ inputs.secrets_list }}
-          full_app_name: ${{ inputs.environment}}/${{ inputs.app_name}}
+#          full_app_name: ${{ inputs.environment}}/${{ inputs.app_name}}
+           full_app_name: ${{ inputs.environment}}
         run: |
           echo $full_app_name
           IFS=',' read -ra secrets_array <<< "$secrets_list"
