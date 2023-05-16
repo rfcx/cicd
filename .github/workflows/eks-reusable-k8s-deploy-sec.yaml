@@ -62,7 +62,7 @@ jobs:
           for secret_key in "${secrets_array[@]}"; do
             if [[ $input_json == *"$secret_key"* ]]; then
               secret_value=$(echo "$input_json" | jq -r ".$secret_key")
-              create+=("--from-literal" "$secret_key=$secret_value")
+              create+=("--from-literal=""$secret_key=$secret_value")
             fi
           done
           ${delete[@]}
