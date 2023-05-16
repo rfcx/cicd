@@ -65,6 +65,7 @@ jobs:
               create+=("--from-literal=""$secret_key=$secret_value")
             fi
           done
+          echo "${create[@]}"
           ${delete[@]}
           ${create[@]}
 #      - name: 'Deploy: Kubernetes apply'
