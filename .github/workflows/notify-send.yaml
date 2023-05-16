@@ -124,7 +124,7 @@ jobs:
       - name: 'Notify: Get Commit Title'
         id: git-meta
         run: |
-          echo "commit-title=`git show -s --format='%s'` >> $GITHUB_OUTPUT"
+          echo "commit-title=`git show -s --format='%s'`" >> $GITHUB_OUTPUT
 
       - name: 'Notify: Slack Failed'
         # v1 (1.9.0) @ 30 Mar 2022 https://github.com/ravsamhq/notify-slack-action/tags

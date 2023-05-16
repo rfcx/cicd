@@ -86,12 +86,12 @@ jobs:
       - name: 'Setup: Git short sha'
         id: git-short-sha
         run: |
-          echo "short-sha=`git rev-parse --short HEAD` >> $GITHUB_OUTPUT"
+          echo "short-sha=`git rev-parse --short HEAD`" >> $GITHUB_OUTPUT
 
       - name: 'Setup: Git unuqie tag'
         id: git-unique-tag
         run: |
-          echo "unique-tag=${{ inputs.tag-environment }}-`git rev-parse --short HEAD` >> $GITHUB_OUTPUT"
+          echo "unique-tag=${{ inputs.tag-environment }}-`git rev-parse --short HEAD`" >> $GITHUB_OUTPUT
 
       - name: 'Setup: Login to ECR'
         # v1 (1.3.3) @ 03 Nov 2021 https://github.com/aws-actions/amazon-ecr-login/tags
