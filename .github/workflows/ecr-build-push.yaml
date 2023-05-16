@@ -46,7 +46,7 @@ on:
         description: AWS Secret Access Key
         required: true
     outputs:
-      short-sha: 
+      short-sha:
         description: Git commit short SHA
         value: ${{ jobs.build.outputs.short-sha }}
       unique-tag:
@@ -86,8 +86,8 @@ jobs:
       - name: 'Setup: Git meta'
         id: git-meta
         run: |
-          echo "::set-output name=short-sha::`git rev-parse --short HEAD`"
-          echo "::set-output name=unique-tag::${{ inputs.tag-environment }}-`git rev-parse --short HEAD`"
+          echo "short-sha=`git rev-parse --short HEAD` >> $GITHUB_OUTPUT"
+          echo "unique-tag=${{ inputs.tag-environment }}-`git rev-parse --short HEAD` >> $GITHUB_OUTPUT"
 
       - name: 'Setup: Login to ECR'
         # v1 (1.3.3) @ 03 Nov 2021 https://github.com/aws-actions/amazon-ecr-login/tags
