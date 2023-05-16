@@ -36,7 +36,7 @@ jobs:
       - name: 'Setup: Output branch name'
         id: branch
         run: |
-          if [[ "${{ github.event_name }}" = "pull_request" ]]; then echo "::set-output name=branch-name::`echo ${GITHUB_HEAD_REF}`"; else echo "::set-output name=branch-name::`echo ${GITHUB_REF#refs/heads/}`"; fi
+          if [[ "${{ github.event_name }}" = "pull_request" ]]; then echo "branch-name=`echo ${GITHUB_HEAD_REF}`" >> $GITHUB_OUTPUT; else echo "branch-name=`echo ${GITHUB_REF#refs/heads/}`" >> $GITHUB_OUTPUT; fi
 
       - name: 'Setup: Get ID of previous run' # Need to execute this early (before another run starts)
         id: workflow-runs
