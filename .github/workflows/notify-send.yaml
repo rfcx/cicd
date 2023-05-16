@@ -65,8 +65,8 @@ jobs:
       # -------------------------------------------------- #
       - name: 'Notify: Get conclusion of previous run'
         id: latest_run_conclusion
-        uses: octokit/request-action@7e93b91076fad3920c29d44eb2a6311d929db3dd
-        # v2 (2.1.0) @ 03 Dec 2021 https://github.com/octokit/request-action/tags
+        uses: octokit/request-action@v2.1.7
+        # v2 (2.1.7) @ 11 Oct 2022 https://github.com/octokit/request-action/tags
         if: inputs.previous-run-id
         with:
           # https://docs.github.com/en/rest/reference/actions#get-a-workflow-run
@@ -84,8 +84,8 @@ jobs:
 
       - name: 'Notify: Get data of latest successful run'
         id: latest_success
-        uses: octokit/request-action@7e93b91076fad3920c29d44eb2a6311d929db3dd
-        # v2 (2.1.0) @ 03 Dec 2021 https://github.com/octokit/request-action/tags
+        uses: octokit/request-action@v2.1.7
+        # v2 (2.1.7) @ 11 Oct 2022 https://github.com/octokit/request-action/tags
         if: |
           !inputs.previous-run-id || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
         with:
