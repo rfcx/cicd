@@ -54,7 +54,7 @@ jobs:
         env: 
           input_json: ${{ toJson(secrets) }}
           secrets_list: ${{ inputs.secrets_list }}
-          environment: ${{ inputs.environment}}
+          environment: staging/core-api
         run: |
           IFS=',' read -ra secrets_array <<< "$secret_name"
           create=("kubectl" "create" "secret" "generic" "test1")
