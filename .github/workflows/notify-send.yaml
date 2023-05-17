@@ -65,8 +65,8 @@ jobs:
       # -------------------------------------------------- #
       - name: 'Notify: Get conclusion of previous run'
         id: latest_run_conclusion
-        uses: octokit/request-action@v2.1.7
         # v2 (2.1.7) @ 11 Oct 2022 https://github.com/octokit/request-action/tags
+        uses: octokit/request-action@89a1754fe82ca777b044ca8e79e9881a42f15a93
         if: inputs.previous-run-id
         with:
           # https://docs.github.com/en/rest/reference/actions#get-a-workflow-run
@@ -84,8 +84,8 @@ jobs:
 
       - name: 'Notify: Get data of latest successful run'
         id: latest_success
-        uses: octokit/request-action@v2.1.7
         # v2 (2.1.7) @ 11 Oct 2022 https://github.com/octokit/request-action/tags
+        uses: octokit/request-action@89a1754fe82ca777b044ca8e79e9881a42f15a93
         if: |
           !inputs.previous-run-id || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
         with:
@@ -106,8 +106,8 @@ jobs:
           echo ${{ (fromJson(steps.latest_success.outputs.data).workflow_runs.length == 0 && 'No runs') || fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp }}
 
       - name: 'Notify: Get Slack User'
-        uses: kanga333/variable-mapper@92703696e9a3f370901c3d53ae3836569b1055e5
         # v0 (0.2.2) @ 03 Nov 2021 https://github.com/kanga333/variable-mapper/tags
+        uses: kanga333/variable-mapper@92703696e9a3f370901c3d53ae3836569b1055e5
         with:
           key: '${{ github.event.sender.login }}'
           map: |
