@@ -106,8 +106,8 @@ jobs:
           echo ${{ (fromJson(steps.latest_success.outputs.data).workflow_runs.length == 0 && 'No runs') || fromJson(steps.latest_success.outputs.data).workflow_runs[0].head_commit.timestamp }}
 
       - name: 'Notify: Get Slack User'
-        # v0 (0.2.2) @ 03 Nov 2021 https://github.com/kanga333/variable-mapper/tags
-        uses: kanga333/variable-mapper@92703696e9a3f370901c3d53ae3836569b1055e5
+        # v0 (0.3.0) @ 23 Oct 2022 https://github.com/kanga333/variable-mapper/tags
+        uses: kanga333/variable-mapper@3681b75f5c6c00162721168fb91ab74925eaebcb
         with:
           key: '${{ github.event.sender.login }}'
           map: |
