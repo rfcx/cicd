@@ -54,12 +54,12 @@ jobs:
         env: 
           input_json: ${{ toJson(secrets) }}
           secrets_list: ${{ inputs.secrets_list }}
-          environment: staging/core-api
+          environment: ${{ inputs.environment}}
         run: |
-          IFS=',' read -ra secrets_array <<< "$secret_name"
+          IFS=',' read -ra secrets_list <<< "$secret_name"
           create=("kubectl" "create" "secret" "generic" "test1")
           delete=("kubectl" "delete" "secret" "--ignore-not-found" "test1")
-          for secret_key in "${secrets_array[@]}"; do
+          for secret_key in "${secrets_list[@]}"; do
             if [[ $input_json == *"$secret_key"* ]]; then
               secret_value=$(echo "$input_json" | jq -r ".$secret_key")
               create+=("--from-literal=""$secret_key=$secret_value")
