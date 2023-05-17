@@ -127,8 +127,8 @@ jobs:
           echo "commit-title=`git show -s --format='%s'`" >> $GITHUB_OUTPUT
 
       - name: 'Notify: Slack Failed'
-        # v1 (1.9.0) @ 30 Mar 2022 https://github.com/ravsamhq/notify-slack-action/tags
-        uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
+        # v2 (2.3.0) @ 25 Oct 2022 https://github.com/ravsamhq/notify-slack-action/tags
+        uses: ravsamhq/notify-slack-action@bca2d7f5660b833a27bda4f6b8bef389ebfefd25
         # Notify failure if previous run was not also a failure
         if: |
           inputs.always || !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status != 200 || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'failure'
@@ -144,8 +144,8 @@ jobs:
           SLACK_WEBHOOK_URL: '${{ secrets.slack-webhook }}'
 
       - name: 'Notify: Slack Success'
-        # v1 (1.9.0) @ 30 Mar 2022 https://github.com/ravsamhq/notify-slack-action/tags
-        uses: ravsamhq/notify-slack-action@1f019707281e1f3c939880a75b9c401e00f0f7cf
+        # v2 (2.3.0) @ 25 Oct 2022 https://github.com/ravsamhq/notify-slack-action/tags
+        uses: ravsamhq/notify-slack-action@bca2d7f5660b833a27bda4f6b8bef389ebfefd25
         # Notify success if previous run was not also a success
         if: |
           inputs.always || !inputs.previous-run-id || steps.latest_run_conclusion.outputs.status != 200 || fromJson(steps.latest_run_conclusion.outputs.data).conclusion != 'success'
