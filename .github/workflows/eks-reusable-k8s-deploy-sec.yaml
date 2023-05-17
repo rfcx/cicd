@@ -56,7 +56,7 @@ jobs:
           secrets_list: ${{ inputs.secrets_list }}
           environment: ${{ inputs.environment}}
         run: |
-          k8secname=$(echo "$environment" | cut -d'/' -f2)
+#          k8secname=$(echo "$environment" | cut -d'/' -f2)
           IFS=',' read -ra secrets_array <<< "$secret_name"
           create=("kubectl" "create" "secret" "generic" "test1")
           delete=("kubectl" "delete" "secret" "--ignore-not-found" "test1")
