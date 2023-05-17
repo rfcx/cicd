@@ -113,11 +113,11 @@ jobs:
           map: |
             {
               "antonyharfield": { "SLACK_MENTION_USERS": "U09HZUDUY" },
-              "charles-allen": { "SLACK_MENTION_USERS": "U6LT2N3SS" },
-              "naluinui": { "SLACK_MENTION_USERS": "U19GA1FT2" },
-              "Nutto55": { "SLACK_MENTION_USERS": "UC2NVRCAY" },
               "rassokhin-s": { "SLACK_MENTION_USERS": "U0ADVPX35" },
               "Tooseriuz": { "SLACK_MENTION_USERS": "UC905TCTV" },
+              "rassokhina-e": { "SLACK_MENTION_USERS": "U73MLD3UP" },
+              "grindarius": { "SLACK_MENTION_USERS": "U014RN99J9Y" },
+              "RatreeOchn": { "SLACK_MENTION_USERS": "UK4PVHM9C" },
               ".*": { "SLACK_MENTION_USERS": "" }
             }
 
