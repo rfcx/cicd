@@ -56,9 +56,10 @@ jobs:
           secrets_list: ${{ inputs.secrets_list }}
           environment: ${{ inputs.environment}}
         run: |
+          k8secname=$(echo "$environment" | cut -d'/' -f2)
           IFS=',' read -ra secrets_array <<< "$secrets_list"
-          create=("kubectl" "create" "secret" "generic" "test1")
-          delete=("kubectl" "delete" "secret" "--ignore-not-found" "test1")
+          create=("kubectl" "create" "secret" "generic" "$k8secname")
+          delete=("kubectl" "delete" "secret" "--ignore-not-found" "$k8secname")
           for secret_key in "${secrets_array[@]}"; do
             if [[ $input_json == *"$secret_key"* ]]; then
               secret_value=$(echo "$input_json" | jq -r ".$secret_key")
