@@ -49,7 +49,7 @@ jobs:
           secrets_list: ${{ inputs.secrets_list }}
           environment: ${{ inputs.environment }}
           namespace: ${{ inputs.namespace }}
-          k8secname: ${{ inputes.secrets_name }}
+          k8secname: ${{ inputs.secrets_name }}
         run: |
           IFS=',' read -ra secrets_array <<< "$secrets_list"
           create=("kubectl" "create" "-n $namespace" "secret" "generic" "$k8secname")
