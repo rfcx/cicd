@@ -31,8 +31,8 @@ jobs:
           find build -name "*.yaml" -exec sed -i s/:latest/:${{ inputs.tag }}/g {} +
 
       - name: 'Deploy: Kubernetes apply'
-        # v1 (1.21.2) @ 03 Nov 2021 https://github.com/actions-hub/kubectl/tags
-        uses: actions-hub/kubectl@365773786ebd92c7b36b6ab80e17d4a213ab0cd1
+        # v1 (1.27.1) @ 12 Apr 2023 https://github.com/actions-hub/kubectl/tags
+        uses: actions-hub/kubectl@aeefe34e9e0f865864cce046132e626361152150
         env:
           KUBE_CONFIG: ${{ secrets.kube-config }}
         with:
