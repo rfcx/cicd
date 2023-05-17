@@ -20,16 +20,7 @@ on:
       secrets_list:
         required: true
         type: string
-#    secrets:
-#      kube-config:
-#        description: KUBE_CONFIG file
-#        required: true
-#      aws-access-key-id:
-#        description: AWS Access Key ID
-#        required: false
-#      aws-secret-access-key:
-#        description: AWS Secret Access Key
-#        required: false
+
 jobs:
   build:
     runs-on: ${{ inputs.runs-on }}
@@ -48,18 +39,18 @@ jobs:
       - name: 'Get Kubeconf EKS'
         run: |
           aws eks update-kubeconfig --region eu-west-1 --name eks-cluster-nonprod         
-#          aws eks update-kubeconfig --region eu-west-1 --name ${{ vars.EKS_CLUSTER_NAME_NONPROD }}  
 
       - name: getsecrets
         env: 
           input_json: ${{ toJson(secrets) }}
           secrets_list: ${{ inputs.secrets_list }}
-          environment: ${{ inputs.environment}}
+          environment: ${{ inputs.environment }}
+          namespace: ${{ inputs.namespace }}
         run: |
           k8secname=$(echo "$environment" | cut -d'/' -f2)
           IFS=',' read -ra secrets_array <<< "$secrets_list"
-          create=("kubectl" "create" "secret" "generic" "$k8secname")
-          delete=("kubectl" "delete" "secret" "--ignore-not-found" "$k8secname")
+          create=("kubectl" "create" "-n $namespace" "secret" "generic" "$k8secname")
+          delete=("kubectl" "delete" "-n $namespace" "secret" "--ignore-not-found" "$k8secname")
           for secret_key in "${secrets_array[@]}"; do
             if [[ $input_json == *"$secret_key"* ]]; then
               secret_value=$(echo "$input_json" | jq -r ".$secret_key")
@@ -69,10 +60,4 @@ jobs:
           echo "${create[@]}"
           ${delete[@]}
           ${create[@]}
-#      - name: 'Deploy: Kubernetes apply'
-#        run: |
-#          kubectl delete -R -f build/${{ inputs.namespace }} --ignore-not-found=true -n${{ inputs.namespace }} --grace-period=10
-#          kubectl apply -R -f build/${{ inputs.namespace }} -n${{ inputs.namespace }}
-
-
 
