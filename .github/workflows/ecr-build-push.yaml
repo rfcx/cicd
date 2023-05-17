@@ -72,8 +72,8 @@ jobs:
         uses: docker/setup-buildx-action@4b4e9c3e2d4531116a6f8ba8e71fc6e2cb6e6c8c
 
       - name: 'Setup: Configure AWS credentials'
-        # v1 (1.6.1) @ 19 Jan 2022 https://github.com/aws-actions/configure-aws-credentials/tags
-        uses: aws-actions/configure-aws-credentials@05b148adc31e091bafbaf404f745055d4d3bc9d2
+        # v2 (2.0.0) @ 7 Mar 2023 https://github.com/aws-actions/configure-aws-credentials/tags
+        uses: aws-actions/configure-aws-credentials@v2.0.0
         with:
           aws-access-key-id: ${{ secrets.aws-access-key-id }}
           aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
