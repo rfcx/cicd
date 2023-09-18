@@ -41,6 +41,10 @@ jobs:
         run: |
           aws eks update-kubeconfig --region eu-west-1 --name ${{ secrets.aws_eks_name_nonprod }}
 
+      - name: 'Ensure user is authenticated'
+        run: |
+          kubectl get svc
+
       # TODO: replace "secrets.aws_eks_name_nonprod" with an input based on target cluster
       - name: 'Ensure namespace exists'
         run: |
