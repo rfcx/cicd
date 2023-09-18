@@ -36,11 +36,17 @@ jobs:
           aws-region: eu-west-1
 
       # TODO: replace "secrets.aws_access_key_id_nonprod_app_deploy" with an input based on target cluster
+      # TODO: replace hardcoded region value with an input
       - name: 'Get Kubeconf EKS'
         run: |
           aws eks update-kubeconfig --region eu-west-1 --name ${{ secrets.aws_eks_name_nonprod }}
 
-      - name: getsecrets
+      # TODO: replace "secrets.aws_access_key_id_nonprod_app_deploy" with an input based on target cluster
+      - name: 'Ensure namespace exists'
+        run: |
+          kubectl get namespace | grep -q ${{ secrets.aws_eks_name_nonprod }} || kubectl create namespace ${{ secrets.aws_eks_name_nonprod }}
+
+      - name: Create Kubernetes Secrets
         env: 
           input_json: ${{ toJson(secrets) }}
           secrets_list: ${{ inputs.secrets_list }}
