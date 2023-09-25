@@ -38,13 +38,12 @@ on:
         type: boolean
         default: false
         required: false
+    secrets: 
       aws-access-key-id:
         description: AWS Access Key ID
-        type: string
         required: true
       aws-secret-access-key:
         description: AWS Secret Access Key
-        type: string
         required: true
     outputs:
       short-sha: 
