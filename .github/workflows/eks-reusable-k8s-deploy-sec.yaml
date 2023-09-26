@@ -77,6 +77,10 @@ jobs:
               echo -e "  $key: \"$value\"\n" >> secret.yaml
           done
 
+      - name: 'Setup: Deploy secrets file'
+        run: |
+          kubectl apply -f secrets.yaml
+
       # - name: Create Kubernetes Secrets
       #   env: 
       #     input_json: ${{ toJson(secrets) }}
