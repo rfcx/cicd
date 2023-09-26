@@ -79,7 +79,7 @@ jobs:
 
       - name: 'Setup: Deploy secrets file'
         run: |
-          kubectl apply -f secrets.yaml
+          kubectl apply -f secret.yaml
 
       # - name: Create Kubernetes Secrets
       #   env: 
