@@ -10,6 +10,15 @@ on:
         description: Kubernetes namespace
         type: string
         required: true
+      aws-region:
+        description: AWS region
+        type: string
+        required: true
+        default: eu-west-1
+      cluster-name:
+        description: EKS Cluster name
+        type: string
+        required: true
       environment:
         required: true
         type: string
@@ -33,13 +42,12 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.aws_access_key_id_nonprod_app_deploy }}
           aws-secret-access-key: ${{ secrets.aws_secret_access_key_nonprod_app_deploy }}
-          aws-region: eu-west-1
+          aws-region: ${{ inputs.aws-region }}
+          cluster-name: ${{ inputs.cluster-name }}
 
-      # TODO: replace "secrets.aws_eks_name_nonprod" with an input based on target cluster
-      # TODO: replace hardcoded region value with an input
       - name: 'Get Kubeconf EKS'
         run: |
-          aws eks update-kubeconfig --region eu-west-1 --name ${{ secrets.aws_eks_name_nonprod }}
+          aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
 
       - name: Create Kubernetes Secrets
         env: 
