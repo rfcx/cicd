@@ -46,6 +46,7 @@ jobs:
 
       - name: 'Get Kubeconf EKS'
         run: |
+          echo ${{ inputs.environment }}
           aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
 
       - name: 'Setup: Create yaml file'
