@@ -28,13 +28,6 @@ on:
       name:
         required: true
         type: string
-    secrets: 
-      aws-access-key-id:
-        description: AWS Access Key ID
-        required: true
-      aws-secret-access-key:
-        description: AWS Secret Access Key
-        required: true
 
 jobs:
   build:
