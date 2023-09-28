@@ -40,13 +40,13 @@ jobs:
       - name: 'Setup: Configure AWS credentials'
         uses: aws-actions/configure-aws-credentials@05b148adc31e091bafbaf404f745055d4d3bc9d2
         with:
-          aws-access-key-id: ${{ secrets.aws-access-key-id }}
-          aws-secret-access-key: ${{ secrets.aws-secret-access-key }}
+          # TODO: get correct conditional value
+          aws-access-key-id: ${{ secrets.aws_access_key_id_nonprod_app_deploy }}
+          aws-secret-access-key: ${{ secrets.aws_secret_access_key_nonprod_app_deploy }}
           aws-region: ${{ inputs.aws-region }}
 
       - name: 'Get Kubeconf EKS'
         run: |
-          echo ${{ inputs.environment }}
           aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
 
       - name: 'Setup: Create yaml file'
