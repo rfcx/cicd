@@ -1,0 +1,68 @@
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: Platform to execute on
+        type: string
+        default: ubuntu-latest
+        required: false
+      tag:
+        description: Image tag to deploy
+        type: string
+        required: true
+      namespace:
+        description: Kubernetes namespace
+        type: string
+        required: true
+      aws-region:
+        description: AWS region
+        type: string
+        required: false
+        default: eu-west-1
+      role-to-assume:
+        description: AWS IAM role to assume
+        type: string
+        default: deployment-runner
+        required: false
+jobs:
+  deploy:
+    strategy:
+      matrix:
+        target: ${{ fromJson(inputs.targets) }}
+      fail-fast: true
+      max-parallel: 1
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+
+      - name: 'Test matrix'
+        run: echo "Running ${{ matrix.target }}"
+
+      - name: 'Setup: Configure AWS credentials'
+        # v4 (4.0.0) @ Sep 2023 https://github.com/aws-actions/configure-aws-credentials/tags
+        uses: aws-actions/configure-aws-credentials@8c3f20df09ac63af7b3ae3d7c91f105f857d8497
+        with:
+          aws-region: ${{ inputs.aws-region }}
+          role-to-assume: ${{ inputs.role-to-assume }}
+
+      - name: 'Get Kubeconf EKS'
+        run: |
+          aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
+
+      - name: 'Setup: Git checkout'
+        # v4 (4.1.0) @ Sep 2022 https://github.com/actions/checkout/tags
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
+
+      - name: 'Deploy: Set image version'
+        run: |
+          find build/${{ matrix.target }} -name "*.yaml" -exec sed -i s/:latest/:${{ inputs.tag }}/g {} +
+          find build/${{ matrix.target }} -name "*.yaml" -exec sed -i s/aws-account-id/${{ inputs.aws-account-id }}/g {} +
+          find build/${{ matrix.target }} -name "*.yaml" -exec sed -i s/aws-region/${{ inputs.aws-region }}/g {} +
+
+      - name: 'Deploy: Kubernetes apply'
+        run: |
+          kubectl delete -R -f build/${{ inputs.namespace }}/${{ matrix.target }} --ignore-not-found=true -n ${{ inputs.namespace }} --grace-period=10
+          kubectl apply -R -f build/${{ inputs.namespace }}/${{ matrix.target }} -n ${{ inputs.namespace }}
+
+      - name: 'Deploy: Verify'
+        run: |
+          kubectl rollout status deployment/${{ matrix.target }} -n ${{ inputs.namespace }}
