@@ -39,6 +39,9 @@ jobs:
     runs-on: ${{ inputs.runs-on }}
     environment: ${{ inputs.environment }}
     steps:
+      - name: 'Setup: Git checkout'
+        # v4 (4.1.0) @ Sep 2022 https://github.com/actions/checkout/tags
+        uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
 
       - name: 'Setup: Configure AWS credentials'
         uses: aws-actions/configure-aws-credentials@8c3f20df09ac63af7b3ae3d7c91f105f857d8497
