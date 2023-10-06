@@ -14,8 +14,7 @@ on:
       registry:
         description: AWS ECR registry
         type: string
-        default: '887044485231.dkr.ecr.us-east-1.amazonaws.com'
-        required: false
+        required: true
       dockerfile:
         description: Path of dockerfile
         type: string
@@ -38,15 +37,8 @@ on:
         type: boolean
         default: false
         required: false
-    secrets: 
-      aws-access-key-id:
-        description: AWS Access Key ID
-        required: true
-      aws-secret-access-key:
-        description: AWS Secret Access Key
-        required: true
     outputs:
-      short-sha: 
+      short-sha:
         description: Git commit short SHA
         value: ${{ jobs.build.outputs.short-sha }}
       unique-tag:
