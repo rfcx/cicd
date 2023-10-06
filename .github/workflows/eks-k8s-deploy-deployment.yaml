@@ -22,6 +22,10 @@ on:
         description: EKS Cluster name
         type: string
         required: true
+      aws-account-id:
+        description: AWS Account ID
+        type: string
+        required: true
       aws-region:
         description: AWS region
         type: string
