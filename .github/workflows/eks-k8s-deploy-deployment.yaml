@@ -44,6 +44,9 @@ jobs:
       fail-fast: true
       max-parallel: 1
     runs-on: ${{ inputs.runs-on }}
+    permissions:
+      id-token: write
+      contents: read
     steps:
 
       - name: 'Test matrix'

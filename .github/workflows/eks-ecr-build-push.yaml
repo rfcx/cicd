@@ -64,6 +64,9 @@ jobs:
     outputs:
       short-sha: ${{ steps.git-meta.outputs.short-sha }}
       unique-tag: ${{ steps.git-meta.outputs.unique-tag }}
+    permissions:
+      id-token: write
+      contents: read
     steps:
       - name: 'Test matrix'
         run: echo "Running ${{ matrix.target }}"
