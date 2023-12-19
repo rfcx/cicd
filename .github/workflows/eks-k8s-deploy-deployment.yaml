@@ -52,6 +52,9 @@ jobs:
       - name: 'Test matrix'
         run: echo "Running ${{ matrix.target }}"
 
+      - uses: chrislennon/action-aws-cli@v1.1
+      - uses: azure/setup-kubectl@v3
+
       - name: 'Setup: Configure AWS credentials'
         # v4 (4.0.1) @ 03 Oct 2024 https://github.com/aws-actions/configure-aws-credentials/tags
         uses: aws-actions/configure-aws-credentials@010d0da01d0b5a38af31e9c3470dbfdabdecca3a
@@ -59,9 +62,9 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
           role-to-assume: arn:aws:iam::${{ inputs.aws-account-id }}:role/${{ inputs.role-to-assume }}
 
-      # - name: 'Get Kubeconf EKS'
-      #   run: |
-      #     aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
+      - name: 'Get Kubeconf EKS'
+        run: |
+          aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
 
       - name: 'Setup: Git checkout'
         # v4 (4.1.0) @ Sep 2022 https://github.com/actions/checkout/tags
