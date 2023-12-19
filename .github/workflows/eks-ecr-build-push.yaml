@@ -4,12 +4,17 @@ on:
       runs-on:
         description: Platform to execute on
         type: string
-        default: nonprod-deployment-runner-19-12-2
+        default: ubuntu-latest
         required: false
       aws-region:
         description: AWS region
         type: string
-        default: us-east-1
+        default: eu-west-1
+        required: false
+      role-to-assume:
+        description: AWS IAM role to assume
+        type: string
+        default: RFCX-EKS-DeployRole
         required: false
       registry:
         description: AWS ECR registry
@@ -70,9 +75,8 @@ jobs:
         # v1 (1.6.1) @ 19 Jan 2022 https://github.com/aws-actions/configure-aws-credentials/tags
         uses: aws-actions/configure-aws-credentials@05b148adc31e091bafbaf404f745055d4d3bc9d2
         with:
-          aws-access-key-id: ${{ inputs.aws-access-key-id }}
-          aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
           aws-region: ${{ inputs.aws-region }}
+          role-to-assume: ${{ inputs.role-to-assume }}
 
       - name: 'Setup: Git checkout'
         # v3 (3.0.0) @ 02 Mar 2022 https://github.com/actions/checkout/tags
