@@ -71,6 +71,11 @@ jobs:
         run: |
           aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
 
+      - name: Interact with the cluster
+        run: |
+          kubectl get nodes
+          # Any other kubectl commands
+
       - name: 'Setup: Git checkout'
         # v4 (4.1.0) @ Sep 2022 https://github.com/actions/checkout/tags
         uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608
