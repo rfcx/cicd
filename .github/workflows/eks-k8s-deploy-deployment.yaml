@@ -59,9 +59,9 @@ jobs:
           aws-region: ${{ inputs.aws-region }}
           role-to-assume: arn:aws:iam::${{ inputs.aws-account-id }}:role/${{ inputs.role-to-assume }}
 
-      - name: 'Get Kubeconf EKS'
-        run: |
-          aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
+      # - name: 'Get Kubeconf EKS'
+      #   run: |
+      #     aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
 
       - name: 'Setup: Git checkout'
         # v4 (4.1.0) @ Sep 2022 https://github.com/actions/checkout/tags
