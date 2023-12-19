@@ -52,10 +52,20 @@ jobs:
       - name: 'Test matrix'
         run: echo "Running ${{ matrix.target }}"
 
-      - name: Install wget
+      - name: Install pip
+        uses: actions/setup-python@v2
+        with:
+          python-version: "3.7"
+
+      - name: Install awscli
         run: |
-            sudo apt-get update
-            sudo apt-get install -y wget unzip
+          python -m pip install --upgrade pip
+          pip install awscli
+
+      # - name: Install wget
+      #   run: |
+      #       sudo apt-get update
+      #       sudo apt-get install -y wget unzip
 
       - uses: unfor19/install-aws-cli-action@v1
       - uses: azure/setup-kubectl@v3
