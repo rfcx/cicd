@@ -53,7 +53,9 @@ jobs:
         run: echo "Running ${{ matrix.target }}"
 
       - name: Install wget
-        run: sudo apt-get install -y wget
+        run: |
+            sudo apt-get update
+            sudo apt-get install wget
 
       - uses: unfor19/install-aws-cli-action@v1
       - uses: azure/setup-kubectl@v3
