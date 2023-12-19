@@ -67,7 +67,7 @@ jobs:
       #       sudo apt-get update
       #       sudo apt-get install -y wget unzip
 
-      - uses: unfor19/install-aws-cli-action@v1
+      # - uses: unfor19/install-aws-cli-action@v1
       - uses: azure/setup-kubectl@v3
 
       - name: 'Setup: Configure AWS credentials'
