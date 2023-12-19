@@ -55,7 +55,7 @@ jobs:
       - name: Install wget
         run: |
             sudo apt-get update
-            sudo apt-get install wget
+            sudo apt-get install -y wget
 
       - uses: unfor19/install-aws-cli-action@v1
       - uses: azure/setup-kubectl@v3
