@@ -62,12 +62,6 @@ jobs:
           python -m pip install --upgrade pip
           pip install awscli
 
-      # - name: Install wget
-      #   run: |
-      #       sudo apt-get update
-      #       sudo apt-get install -y wget unzip
-
-      # - uses: unfor19/install-aws-cli-action@v1
       - uses: azure/setup-kubectl@v3
 
       - name: 'Setup: Configure AWS credentials'
@@ -81,10 +75,10 @@ jobs:
         run: |
           aws eks update-kubeconfig --region ${{ inputs.aws-region }} --name ${{ inputs.cluster-name }}
 
-      - name: Interact with the cluster
+      - name: Create Kubernetes namespace if does not exist
         run: |
-          kubectl get nodes
-          # Any other kubectl commands
+          namespaceName="${{ inputs.namespace }}"
+          kubectl get namespace | grep -q "^$namespaceName " || kubectl create namespace $namespaceName
 
       - name: 'Setup: Git checkout'
         # v4 (4.1.0) @ Sep 2022 https://github.com/actions/checkout/tags
