@@ -10,6 +10,11 @@ on:
         description: Current workflow status
         type: string
         required: true
+      always:
+        description: Always send notification
+        type: boolean
+        required: false
+        default: false
       notification-title:
         description: Title in the notification
         type: string
@@ -76,8 +81,8 @@ jobs:
         run: |
           echo "Previous run conclusion = ${{ steps.previous-workflow-status.outputs.result }}"
 
-      - name: 'Notify: if previous workflow run failed or the current is failing'
-        if: ${{ failure() || steps.previous-workflow-status.outputs.result == 'failure' }}
+      - name: 'Notify: if previous workflow run failed or the current is failing or always send'
+        if: ${{ failure() || steps.previous-workflow-status.outputs.result == 'failure' || inputs.always }}
         # v2 (2.3.0) @ 25 Oct 2022 https://github.com/ravsamhq/notify-slack-action/tags
         uses: ravsamhq/notify-slack-action@bca2d7f5660b833a27bda4f6b8bef389ebfefd25
         with:
