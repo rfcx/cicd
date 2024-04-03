@@ -1,0 +1,95 @@
+name: 'Notify'
+on:
+  workflow_call:
+    inputs:
+      repo:
+        description: Repository Name
+        type: string
+        required: true
+      owner:
+        description: Organization Name
+        type: string
+        required: false
+        default: rfcx
+      workflow-id:
+        description: Workflow ID (e.g. build.yml)
+        type: string
+        required: true
+      status:
+        description: Current workflow status
+        type: string
+        required: true
+      notification-title:
+        description: Title in the notification
+        type: string
+        required: true
+      notification-footer:
+        description: Footer in the notification
+        type: string
+        required: false
+    secrets:
+      slack-webhook:
+        description: Slack Webhook URL
+        required: true
+      github-token:
+        description: GitHub Token
+        required: true
+jobs:
+  send:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: 'Setup: Output branch name'
+        id: branch
+        run: |
+          if [[ "${{ github.event_name }}" = "pull_request" ]]; then echo "branch-name=`echo ${GITHUB_HEAD_REF}`" >> $GITHUB_OUTPUT; else echo "branch-name=`echo ${GITHUB_REF#refs/heads/}`" >> $GITHUB_OUTPUT; fi
+
+      - name: 'Setup: Map GitHub user to Slack user'
+        # v0 (0.3.0) @ 23 Oct 2022 https://github.com/kanga333/variable-mapper/tags
+        uses: kanga333/variable-mapper@3681b75f5c6c00162721168fb91ab74925eaebcb
+        id: slack-user
+        with:
+          key: '${{ github.event.sender.login }}'
+          map: |
+            {
+              "antonyharfield": { "id": "U09HZUDUY" },
+              "rassokhin-s": { "id": "U0ADVPX35" },
+              "Tooseriuz": { "id": "UC905TCTV" },
+              "rassokhina-e": { "id": "U73MLD3UP" },
+              "grindarius": { "id": "U014RN99J9Y" },
+              "RatreeOchn": { "id": "UK4PVHM9C" },
+              "LucyDimitrova": { "id": "U06LGGY3TB6" },
+              "naluinui": { "id": "U19GA1FT2" },
+              "veckatimest": { "id": "U06CV3USQRL" },
+              "turk-t": { "id": "U06LE07D127" },
+              ".*": { "id": "" }
+            }
+        
+      - name: 'Notify: Get conclusion of previous run'
+        uses: actions/github-script@v3
+        id: previous-workflow-status
+        with:
+          script: |
+            const runs = await github.actions.listWorkflowRuns({
+              owner: ${{ inputs.owner }},
+              repo: ${{ inputs.repo }},
+              branch: ${{ steps.branch.outputs.branch-name }},
+              status: 'completed',
+              workflow_id: ${{ inputs.workflow-id }},
+              per_page: 1
+            })
+            return runs.data.workflow_runs[0].conclusion
+          result-encoding: string
+          github-token: ${{ secrets.github-token }}
+
+      - name: 'Notify: if previous workflow run failed or the current is failing'
+        if: ${{ failure() || steps.previous-workflow-status.outputs.result == 'failure' }}
+        # v2 (2.3.0) @ 25 Oct 2022 https://github.com/ravsamhq/notify-slack-action/tags
+        uses: ravsamhq/notify-slack-action@bca2d7f5660b833a27bda4f6b8bef389ebfefd25
+        with:
+          status: ${{ inputs.status }}
+          notification_title: '{emoji} ${{ inputs.notification-title }} <{run_url}|{status_message}: ${{ steps.branch.outputs.branch-name }}>'
+          message_format: '*{workflow}* {status_message} in <{repo_url}|{repo}@{branch}> on <{commit_url}|{commit_sha}>'
+          footer: ${{ inputs.notification-footer }}
+          mention_users: ${{ steps.slack-user.outputs.id }}
+        env:
+          SLACK_WEBHOOK_URL: '${{ secrets.slack-webhook }}'
