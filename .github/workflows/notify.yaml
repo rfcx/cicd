@@ -72,6 +72,10 @@ jobs:
           result-encoding: string
           github-token: ${{ secrets.github-token }}
 
+      - name: 'Notify: Print conclusion of previous run'
+        run: |
+          echo "Previous run conclusion = ${{ steps.previous-workflow-status.outputs.result }}"
+
       - name: 'Notify: if previous workflow run failed or the current is failing'
         if: ${{ failure() || steps.previous-workflow-status.outputs.result == 'failure' }}
         # v2 (2.3.0) @ 25 Oct 2022 https://github.com/ravsamhq/notify-slack-action/tags
