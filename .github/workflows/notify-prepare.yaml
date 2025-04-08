@@ -28,7 +28,7 @@ on:
         value: ${{ jobs.prepare.outputs.previous-run-id }}
 jobs:
   prepare:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     outputs:
       branch-name: ${{ steps.branch.outputs.branch-name }}
       previous-run-id: ${{ steps.previous-run.outputs.id }}
