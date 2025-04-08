@@ -54,7 +54,7 @@ on:
         required: true
 jobs:
   send:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: 'Setup: Git checkout'
         # v3 (3.5.2) @ 13 Apr 2023 https://github.com/actions/checkout/tags
