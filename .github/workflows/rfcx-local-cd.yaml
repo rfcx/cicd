@@ -1,0 +1,129 @@
+# Reusable workflow: build + deploy to rfcx-local cluster
+#
+# Called from each rfcx-org repo's `cd.yaml` alongside the existing AWS
+# deploy job. Runs on our self-hosted runner inside the rfcx-local
+# cluster (label: `rfcx-local-deployment-runner`).
+#
+# Two stages:
+#   1. build (matrix over `targets`)    — buildx each Dockerfile stage and push to local registry
+#   2. deploy (matrix over `deployments`) — for each apps-prod deployment, kubectl set-image to the
+#                                            newly-built tag of its source image
+#
+# `deployments` is a JSON array of `{"name": "<apps-prod deployment>", "image": "<target stage>"}` so a
+# single image stage can be deployed to multiple apps-prod deployments (e.g., core-api → core-api + media-api).
+#
+# Usage in caller's cd.yaml:
+#
+#   deploy-rfcx-local:
+#     needs: [prepare, configure]
+#     if: ${{ needs.configure.outputs.namespace == 'production' }}
+#     uses: rfcx/cicd/.github/workflows/rfcx-local-cd.yaml@master
+#     with:
+#       dockerfile: build/Dockerfile
+#       targets: '["core-api","core-tasks","noncore-api","noncore-mqtt"]'
+#       deployments: |
+#         [
+#           {"name": "core-api",     "image": "core-api"},
+#           {"name": "core-tasks",   "image": "core-tasks"},
+#           {"name": "noncore-api",  "image": "noncore-api"},
+#           {"name": "noncore-mqtt", "image": "noncore-mqtt"},
+#           {"name": "media-api",    "image": "core-api"}
+#         ]
+#       repo: rfcx-api
+
+name: 'rfcx-local CD (reusable)'
+
+on:
+  workflow_call:
+    inputs:
+      dockerfile:
+        description: 'Path to Dockerfile within the source repo'
+        required: false
+        type: string
+        default: 'build/Dockerfile'
+      targets:
+        description: 'JSON array of Dockerfile target stages to build'
+        required: true
+        type: string
+      deployments:
+        description: 'JSON array of {name, image} for apps-prod deployments to roll out'
+        required: false
+        type: string
+        default: '[]'
+      repo:
+        description: 'Repo name (for log messages)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: 'rfcx-local build: ${{ matrix.target }}'
+    runs-on: rfcx-local-deployment-runner
+    strategy:
+      matrix:
+        target: ${{ fromJson(inputs.targets) }}
+      fail-fast: false
+    env:
+      REGISTRY: 192.168.5.1:30500
+    outputs:
+      unique-tag: ${{ steps.meta.outputs.unique-tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 'Setup: docker buildx'
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          buildkitd-config-inline: |
+            [registry."192.168.5.1:30500"]
+              http = true
+              insecure = true
+
+      - name: 'Meta: compute tag'
+        id: meta
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          UNIQUE_TAG="rfcx-local-prod-${SHORT_SHA}"
+          echo "unique-tag=${UNIQUE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Building ${{ matrix.target }} as ${UNIQUE_TAG}..."
+
+      - name: 'Build + push'
+        run: |
+          set -euo pipefail
+          docker buildx build \
+            --platform linux/arm64 \
+            --file "${{ inputs.dockerfile }}" \
+            --target "${{ matrix.target }}" \
+            --tag "${REGISTRY}/${{ matrix.target }}:${{ steps.meta.outputs.unique-tag }}" \
+            --tag "${REGISTRY}/${{ matrix.target }}:native-arm64-latest" \
+            --tag "${REGISTRY}/${{ matrix.target }}:rfcx-local-prod-latest" \
+            --output type=registry,registry.insecure=true \
+            .
+
+  deploy:
+    name: 'rfcx-local deploy: ${{ matrix.entry.name }}'
+    needs: [build]
+    if: ${{ inputs.deployments != '[]' && inputs.deployments != '' }}
+    runs-on: rfcx-local-deployment-runner
+    strategy:
+      matrix:
+        entry: ${{ fromJson(inputs.deployments) }}
+      fail-fast: false
+    env:
+      REGISTRY: 192.168.5.1:30500
+      NAMESPACE: apps-prod
+    steps:
+      - name: 'kubectl set image'
+        run: |
+          set -euo pipefail
+          DEPLOY_NAME="${{ matrix.entry.name }}"
+          IMAGE_NAME="${{ matrix.entry.image }}"
+          UNIQUE_TAG="${{ needs.build.outputs.unique-tag }}"
+          CONTAINER_NAME=$(kubectl -n "${NAMESPACE}" get deploy "${DEPLOY_NAME}" \
+            -o jsonpath='{.spec.template.spec.containers[0].name}')
+          echo "Setting image for ${DEPLOY_NAME}/${CONTAINER_NAME} -> ${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
+          kubectl -n "${NAMESPACE}" set image "deployment/${DEPLOY_NAME}" \
+            "${CONTAINER_NAME}=${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
+          echo "Waiting for rollout..."
+          kubectl -n "${NAMESPACE}" rollout status "deployment/${DEPLOY_NAME}" --timeout=180s
+          echo "::notice title=rfcx-local::${{ inputs.repo }}/${DEPLOY_NAME} rolled out to ${UNIQUE_TAG}"
