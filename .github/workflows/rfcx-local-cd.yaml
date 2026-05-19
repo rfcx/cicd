@@ -54,6 +54,17 @@ on:
         description: 'Repo name (for log messages)'
         required: true
         type: string
+      rollout-timeout:
+        description: |
+          Per-deployment rollout-status timeout, in seconds. Each
+          deployment in `deployments` is waited on for up to this
+          long via `kubectl rollout status`. Defaults to 600s (10min)
+          which covers most apps-prod Deployments with rolling-update
+          maxSurge=1 (~3 min per replica) on slow-start images.
+          Bump for unusually heavy services; lower for synthetic tests.
+        required: false
+        type: number
+        default: 600
 
 jobs:
   build:
@@ -112,6 +123,7 @@ jobs:
     env:
       REGISTRY: 192.168.5.1:30500
       NAMESPACE: apps-prod
+      ROLLOUT_TIMEOUT: ${{ inputs.rollout-timeout }}
     steps:
       - name: 'kubectl set image'
         run: |
@@ -124,6 +136,6 @@ jobs:
           echo "Setting image for ${DEPLOY_NAME}/${CONTAINER_NAME} -> ${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
           kubectl -n "${NAMESPACE}" set image "deployment/${DEPLOY_NAME}" \
             "${CONTAINER_NAME}=${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
-          echo "Waiting for rollout..."
-          kubectl -n "${NAMESPACE}" rollout status "deployment/${DEPLOY_NAME}" --timeout=180s
+          echo "Waiting for rollout (timeout ${ROLLOUT_TIMEOUT}s)..."
+          kubectl -n "${NAMESPACE}" rollout status "deployment/${DEPLOY_NAME}" --timeout="${ROLLOUT_TIMEOUT}s"
           echo "::notice title=rfcx-local::${{ inputs.repo }}/${DEPLOY_NAME} rolled out to ${UNIQUE_TAG}"
