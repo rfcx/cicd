@@ -1,0 +1,174 @@
+# Reusable workflow: build + deploy an rfcx-local ANALYSIS WORKER image.
+#
+# Unlike rfcx-local-cd.yaml (which targets long-running Deployments), the
+# analysis/batch workers run as CronJobs (cognition, biodiversity-cli, ...)
+# or as Jobs spawned on-demand by the jobqueue-dispatcher (soundscape,
+# pattern-matching, aed, classification). So this workflow supports three
+# rollout shapes:
+#
+#   * cronjobs   — kubectl set image on each named CronJob (apps-prod)
+#   * deployment — kubectl set image + rollout status (e.g. the dispatcher)
+#   * (none)     — image-only: just build+push the pinned tag. The
+#                  dispatcher already references workers by a pinned tag via
+#                  env; bumping that is a dispatcher redeploy, handled by the
+#                  dispatcher's own cd entry, so on-demand worker images can
+#                  be build-only here.
+#
+# Runs on the in-cluster self-hosted runner (label rfcx-local-deployment-runner),
+# which has kubectl access to apps-prod (Role deploy-apps-prod). Builds with
+# buildx and pushes to the in-cluster registry 192.168.5.1:30500.
+#
+# Usage in caller's cd.yaml (on push to a chosen branch):
+#
+#   deploy-rfcx-local:
+#     if: ${{ github.ref == 'refs/heads/master' }}
+#     uses: rfcx/cicd/.github/workflows/rfcx-local-worker-cd.yaml@master
+#     with:
+#       dockerfile: build/Dockerfile
+#       image: cognition
+#       cronjobs: '["cognition-es2","cognition-es3","cognition-es4"]'
+#       container: cognition
+
+name: 'rfcx-local worker CD (reusable)'
+
+on:
+  workflow_call:
+    inputs:
+      dockerfile:
+        description: 'Path to Dockerfile within the source repo'
+        required: false
+        type: string
+        default: 'build/Dockerfile'
+      target:
+        description: 'Optional Dockerfile target stage (omit for single-stage)'
+        required: false
+        type: string
+        default: ''
+      image:
+        description: 'Registry image name to build (e.g. cognition, arbimon-rfm)'
+        required: true
+        type: string
+      namespace:
+        description: 'Namespace for rollout (default apps-prod)'
+        required: false
+        type: string
+        default: 'apps-prod'
+      cronjobs:
+        description: 'JSON array of CronJob names to set-image (apps-prod)'
+        required: false
+        type: string
+        default: '[]'
+      deployment:
+        description: 'Deployment name to set-image + rollout (optional)'
+        required: false
+        type: string
+        default: ''
+      container:
+        description: 'Container name within the CronJob/Deployment to set (default = image)'
+        required: false
+        type: string
+        default: ''
+      rollout-timeout:
+        description: 'Deployment rollout-status timeout seconds'
+        required: false
+        type: number
+        default: 600
+      repo:
+        description: 'Repo name (for log messages)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    name: 'rfcx-local build: ${{ inputs.image }}'
+    runs-on: rfcx-local-deployment-runner
+    env:
+      REGISTRY: 192.168.5.1:30500
+    outputs:
+      unique-tag: ${{ steps.meta.outputs.unique-tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 'Setup: docker buildx'
+        uses: docker/setup-buildx-action@v3
+        with:
+          driver: docker-container
+          buildkitd-config-inline: |
+            [registry."192.168.5.1:30500"]
+              http = true
+              insecure = true
+
+      - name: 'Meta: compute tag'
+        id: meta
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          echo "unique-tag=rfcx-local-prod-${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: 'Build + push'
+        run: |
+          set -euo pipefail
+          TARGET_ARG=""
+          if [ -n "${{ inputs.target }}" ]; then TARGET_ARG="--target ${{ inputs.target }}"; fi
+          docker buildx build \
+            --platform linux/arm64 \
+            --file "${{ inputs.dockerfile }}" \
+            ${TARGET_ARG} \
+            --tag "${REGISTRY}/${{ inputs.image }}:${{ steps.meta.outputs.unique-tag }}" \
+            --tag "${REGISTRY}/${{ inputs.image }}:rfcx-local-prod-latest" \
+            --tag "${REGISTRY}/${{ inputs.image }}:latest" \
+            --output type=registry,registry.insecure=true \
+            .
+          echo "::notice title=rfcx-local::built ${{ inputs.repo }} -> ${{ inputs.image }}:${{ steps.meta.outputs.unique-tag }}"
+
+  deploy-cronjobs:
+    name: 'rfcx-local cronjobs: ${{ inputs.image }}'
+    needs: [build]
+    if: ${{ inputs.cronjobs != '[]' && inputs.cronjobs != '' }}
+    runs-on: rfcx-local-deployment-runner
+    strategy:
+      matrix:
+        cj: ${{ fromJson(inputs.cronjobs) }}
+      fail-fast: false
+    env:
+      REGISTRY: 192.168.5.1:30500
+    steps:
+      - name: 'kubectl set image (cronjob)'
+        run: |
+          set -euo pipefail
+          NS="${{ inputs.namespace }}"
+          CJ="${{ matrix.cj }}"
+          TAG="${{ needs.build.outputs.unique-tag }}"
+          CONTAINER="${{ inputs.container }}"
+          if [ -z "${CONTAINER}" ]; then
+            CONTAINER=$(kubectl -n "${NS}" get cronjob "${CJ}" \
+              -o jsonpath='{.spec.jobTemplate.spec.template.spec.containers[0].name}')
+          fi
+          echo "Setting ${NS}/cronjob/${CJ} container ${CONTAINER} -> ${REGISTRY}/${{ inputs.image }}:${TAG}"
+          kubectl -n "${NS}" set image "cronjob/${CJ}" \
+            "${CONTAINER}=${REGISTRY}/${{ inputs.image }}:${TAG}"
+          echo "::notice title=rfcx-local::${CJ} set to ${TAG}"
+
+  deploy-deployment:
+    name: 'rfcx-local deployment: ${{ inputs.deployment }}'
+    needs: [build]
+    if: ${{ inputs.deployment != '' }}
+    runs-on: rfcx-local-deployment-runner
+    env:
+      REGISTRY: 192.168.5.1:30500
+      ROLLOUT_TIMEOUT: ${{ inputs.rollout-timeout }}
+    steps:
+      - name: 'kubectl set image (deployment)'
+        run: |
+          set -euo pipefail
+          NS="${{ inputs.namespace }}"
+          DEP="${{ inputs.deployment }}"
+          TAG="${{ needs.build.outputs.unique-tag }}"
+          CONTAINER="${{ inputs.container }}"
+          if [ -z "${CONTAINER}" ]; then
+            CONTAINER=$(kubectl -n "${NS}" get deploy "${DEP}" \
+              -o jsonpath='{.spec.template.spec.containers[0].name}')
+          fi
+          kubectl -n "${NS}" set image "deployment/${DEP}" \
+            "${CONTAINER}=${REGISTRY}/${{ inputs.image }}:${TAG}"
+          kubectl -n "${NS}" rollout status "deployment/${DEP}" --timeout="${ROLLOUT_TIMEOUT}s"
+          echo "::notice title=rfcx-local::${DEP} rolled out to ${TAG}"
