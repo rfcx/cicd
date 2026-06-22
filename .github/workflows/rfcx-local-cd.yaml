@@ -75,7 +75,14 @@ jobs:
         target: ${{ fromJson(inputs.targets) }}
       fail-fast: false
     env:
-      REGISTRY: 192.168.5.1:30500
+      # Push to the in-cluster registry by its DIRECT node address (control-plane
+      # NodePort), NOT the 192.168.5.1:30500 host-gateway alias. buildx/dockerd does
+      # NOT honor the k3s containerd registry mirror (192.168.5.1:30500 ->
+      # 192.168.64.21:30500), so on the build node 192.168.5.1:30500 hits a SEPARATE
+      # orphan host-gateway registry. The kubelet, which DOES follow the mirror, then
+      # pulls from 192.168.64.21:30500 and 404s (ImagePullBackOff). Pushing here makes
+      # build-push and kubelet-pull land on the same physical registry.
+      REGISTRY: 192.168.64.21:30500
     outputs:
       unique-tag: ${{ steps.meta.outputs.unique-tag }}
     steps:
@@ -86,7 +93,7 @@ jobs:
         with:
           driver: docker-container
           buildkitd-config-inline: |
-            [registry."192.168.5.1:30500"]
+            [registry."192.168.64.21:30500"]
               http = true
               insecure = true
 
@@ -121,6 +128,10 @@ jobs:
         entry: ${{ fromJson(inputs.deployments) }}
       fail-fast: false
     env:
+      # set image references the 192.168.5.1:30500 host-gateway alias (consistent with
+      # the apps-prod/*.yaml repo manifests); the kubelet's k3s containerd mirror
+      # resolves 192.168.5.1:30500 -> 192.168.64.21:30500 (the in-cluster registry the
+      # build job pushed to above), so the pull succeeds.
       REGISTRY: 192.168.5.1:30500
       NAMESPACE: apps-prod
       ROLLOUT_TIMEOUT: ${{ inputs.rollout-timeout }}
