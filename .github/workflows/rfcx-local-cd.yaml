@@ -75,14 +75,23 @@ jobs:
         target: ${{ fromJson(inputs.targets) }}
       fail-fast: false
     env:
-      # Push to the in-cluster registry by its DIRECT node address (control-plane
-      # NodePort), NOT the 192.168.5.1:30500 host-gateway alias. buildx/dockerd does
-      # NOT honor the k3s containerd registry mirror (192.168.5.1:30500 ->
-      # 192.168.64.21:30500), so on the build node 192.168.5.1:30500 hits a SEPARATE
-      # orphan host-gateway registry. The kubelet, which DOES follow the mirror, then
-      # pulls from 192.168.64.21:30500 and 404s (ImagePullBackOff). Pushing here makes
-      # build-push and kubelet-pull land on the same physical registry.
-      REGISTRY: 192.168.64.21:30500
+      # Push to the in-cluster HA registry by a DIRECT, REACHABLE node NodePort,
+      # NOT the 192.168.5.1:30500 host-gateway alias. buildx (docker-container
+      # driver) does NOT honor the k3s containerd registry mirror that maps
+      # 192.168.5.1:30500 -> the registry nodes, so the build job must target a
+      # real registry address itself.
+      #
+      # 2026-06-29: repointed from the RETIRED control-plane node 192.168.64.21
+      # (old single registry on rfcx-platform-a, decommissioned 2026-06-26 -> the
+      # build-push timed out: `dial 192.168.64.21:30500 i/o timeout`) to the HA
+      # registry tier (rfcx-registry-1/2/3 on 192.168.2.199/200/201, NodePort
+      # 30500, 3 stateless replicas over one shared distributed-MinIO backend; see
+      # data-stores/registry-ha/). NodePort 30500 on ANY node load-balances to a
+      # healthy replica, and all replicas share state, so build-push here is
+      # immediately visible to the kubelet pull (which resolves 192.168.5.1:30500
+      # to these same .2.x nodes via registries.yaml). .2.200 chosen to match the
+      # already-applied workaround in scripts/build-analysis-workers.sh.
+      REGISTRY: 192.168.2.200:30500
     outputs:
       unique-tag: ${{ steps.meta.outputs.unique-tag }}
     steps:
@@ -93,7 +102,7 @@ jobs:
         with:
           driver: docker-container
           buildkitd-config-inline: |
-            [registry."192.168.64.21:30500"]
+            [registry."192.168.2.200:30500"]
               http = true
               insecure = true
 
@@ -130,8 +139,10 @@ jobs:
     env:
       # set image references the 192.168.5.1:30500 host-gateway alias (consistent with
       # the apps-prod/*.yaml repo manifests); the kubelet's k3s containerd mirror
-      # resolves 192.168.5.1:30500 -> 192.168.64.21:30500 (the in-cluster registry the
-      # build job pushed to above), so the pull succeeds.
+      # (bootstrap/k3s-agent-configs/registries.yaml) resolves 192.168.5.1:30500 ->
+      # the HA registry nodes 192.168.2.199/200/201:30500 (where the build job pushed
+      # above), so the pull succeeds. Image REFERENCES intentionally stay on the
+      # .5.1 alias; only the build-push target moved to a reachable .2.x node.
       REGISTRY: 192.168.5.1:30500
       NAMESPACE: apps-prod
       ROLLOUT_TIMEOUT: ${{ inputs.rollout-timeout }}
