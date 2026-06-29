@@ -75,23 +75,29 @@ jobs:
         target: ${{ fromJson(inputs.targets) }}
       fail-fast: false
     env:
-      # Push to the in-cluster HA registry by a DIRECT, REACHABLE node NodePort,
-      # NOT the 192.168.5.1:30500 host-gateway alias. buildx (docker-container
-      # driver) does NOT honor the k3s containerd registry mirror that maps
-      # 192.168.5.1:30500 -> the registry nodes, so the build job must target a
-      # real registry address itself.
+      # Push to the in-cluster HA registry by its STABLE cluster DNS Service name,
+      # NOT the 192.168.5.1:30500 host-gateway alias (buildx's docker-container
+      # driver does not honor the k3s containerd registry mirror, so the build job
+      # must target a real registry address itself).
       #
-      # 2026-06-29: repointed from the RETIRED control-plane node 192.168.64.21
-      # (old single registry on rfcx-platform-a, decommissioned 2026-06-26 -> the
-      # build-push timed out: `dial 192.168.64.21:30500 i/o timeout`) to the HA
-      # registry tier (rfcx-registry-1/2/3 on 192.168.2.199/200/201, NodePort
-      # 30500, 3 stateless replicas over one shared distributed-MinIO backend; see
-      # data-stores/registry-ha/). NodePort 30500 on ANY node load-balances to a
-      # healthy replica, and all replicas share state, so build-push here is
-      # immediately visible to the kubelet pull (which resolves 192.168.5.1:30500
-      # to these same .2.x nodes via registries.yaml). .2.200 chosen to match the
-      # already-applied workaround in scripts/build-analysis-workers.sh.
-      REGISTRY: 192.168.2.200:30500
+      # The CD runner (ns cicd, on tier=build) runs in the cluster, and its dind
+      # build environment resolves cluster DNS + reaches the registry ClusterIP
+      # (verified 2026-06-29 with a real buildx push using the SAME default
+      # docker-container driver this workflow uses). registry.data.svc =
+      # the `registry` Service (ClusterIP, port 5000) -> kube-proxy load-balances
+      # across the 3 registry-ha replicas and AUTOMATICALLY excludes any down
+      # replica, so there is NO single-node SPOF. sessionAffinity:ClientIP on that
+      # Service (data-stores/registry/registry-service.yaml) keeps all chunks of
+      # one push on one replica (else docker/distribution's stateful chunked blob
+      # upload across replicas -> `blob upload invalid`). All replicas share one
+      # distributed-MinIO backend, so the push is immediately visible to the
+      # kubelet pull (which resolves the unchanged image ref 192.168.5.1:30500 to
+      # the same .2.x registry nodes via registries.yaml; verified crictl-pullable).
+      #
+      # History: was 192.168.64.21:30500 (RETIRED platform-a node -> i/o timeout),
+      # then briefly the single node 192.168.2.200:30500 (worked but a 1-node SPOF);
+      # moved to the Service DNS for HA on 2026-06-29.
+      REGISTRY: registry.data.svc.cluster.local:5000
     outputs:
       unique-tag: ${{ steps.meta.outputs.unique-tag }}
     steps:
@@ -102,7 +108,7 @@ jobs:
         with:
           driver: docker-container
           buildkitd-config-inline: |
-            [registry."192.168.2.200:30500"]
+            [registry."registry.data.svc.cluster.local:5000"]
               http = true
               insecure = true
 
@@ -140,9 +146,12 @@ jobs:
       # set image references the 192.168.5.1:30500 host-gateway alias (consistent with
       # the apps-prod/*.yaml repo manifests); the kubelet's k3s containerd mirror
       # (bootstrap/k3s-agent-configs/registries.yaml) resolves 192.168.5.1:30500 ->
-      # the HA registry nodes 192.168.2.199/200/201:30500 (where the build job pushed
-      # above), so the pull succeeds. Image REFERENCES intentionally stay on the
-      # .5.1 alias; only the build-push target moved to a reachable .2.x node.
+      # the HA registry nodes 192.168.2.199/200/201:30500, the same shared backend
+      # the build job pushed to via registry.data.svc above, so the pull succeeds.
+      # Image REFERENCES intentionally stay on the .5.1 alias (it is what the
+      # NODES' containerd mirror knows; cluster DNS like registry.data.svc is NOT
+      # resolvable from a node's containerd, only from inside the pod network where
+      # the build job runs). Only the build-PUSH target uses the Service DNS.
       REGISTRY: 192.168.5.1:30500
       NAMESPACE: apps-prod
       ROLLOUT_TIMEOUT: ${{ inputs.rollout-timeout }}
