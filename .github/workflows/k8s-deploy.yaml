@@ -18,22 +18,50 @@ on:
       kube-config:
         description: KUBE_CONFIG file
         required: true
+# ─────────────────────────────────────────────────────────────────────────────
+# 🛑 RETIRED 2026-08-31 — this workflow deployed to the AWS estate and is now
+# DISARMED. It fails fast instead of deploying.
+#
+# WHY. Production moved to the self-hosted rfcx-local cluster. This reusable
+# still (a) defaulted `runs-on` to the legacy AWS `deployment-runner`, which was
+# still ONLINE and reachable, and (b) ran `kubectl apply` against the AWS
+# cluster using `KUBE_CONFIG_SUPER`. 13 workflow files across 12 repos could
+# still reach AWS through it — all on stale branches, none of them the branch
+# that actually deploys today. A push to any of those branches would have
+# deployed to AWS silently.
+#
+# WHAT REPLACED IT. rfcx-local CD is INDEPENDENT of this file and is unaffected:
+# `rfcx-local-cd.yaml` and `rfcx-local-worker-cd.yaml` never call this workflow
+# and run on `rfcx-local-deployment-runner`. Verified before disarming.
+#
+# ⚠️ AWS RESOURCES WERE DELIBERATELY NOT TOUCHED. The AWS-side cluster, its
+# load balancers and instances are left exactly as they are; this change only
+# severs the GitHub CI/CD -> AWS path. Retiring the AWS estate itself is a
+# separate, operator-owned decision (see rfcx-local OPEN-ITEMS §209 bucket C:
+# `infra-aws` Deploy/Destroy are deliberately KEPT and are NOT affected here).
+#
+# TO RE-ENABLE: restore the `deploy` job from git history — this file's inputs
+# and secrets interface is unchanged, so callers keep working.
+# Runs on ubuntu-latest so it does not depend on the legacy runner existing.
+# ─────────────────────────────────────────────────────────────────────────────
 jobs:
   deploy:
-    runs-on: ${{ inputs.runs-on }}
+    runs-on: ubuntu-latest
     steps:
-      - name: 'Setup: Git checkout'
-        # v3 (3.5.2) @ 13 Apr 2023 https://github.com/actions/checkout/tags
-        uses: actions/checkout@8e5e7e5ab8b370d6c329ec480221332ada57f0ab
-
-      - name: 'Deploy: Set image version'
+      - name: 'RETIRED: this AWS deploy path is disabled'
         run: |
-          find build -name "*.yaml" -exec sed -i s/:latest/:${{ inputs.tag }}/g {} +
-
-      - name: 'Deploy: Kubernetes apply'
-        # v1 (1.27.1) @ 12 Apr 2023 https://github.com/actions-hub/kubectl/tags
-        uses: actions-hub/kubectl@aeefe34e9e0f865864cce046132e626361152150
-        env:
-          KUBE_CONFIG: ${{ secrets.kube-config }}
-        with:
-          args: apply -R -f build/${{ inputs.namespace }}
+          echo "::error title=AWS deploy path retired::rfcx/cicd k8s-deploy.yaml no longer deploys to AWS."
+          echo ""
+          echo "This reusable workflow deployed to the AWS cluster and was disarmed on 2026-08-31."
+          echo "Production runs on the self-hosted rfcx-local cluster."
+          echo ""
+          echo "  caller     : ${{ github.repository }}@${{ github.ref_name }}"
+          echo "  namespace  : ${{ inputs.namespace }}"
+          echo "  tag        : ${{ inputs.tag }}"
+          echo ""
+          echo "If this workload should still deploy, port it to the rfcx-local lane:"
+          echo "  uses: rfcx/cicd/.github/workflows/rfcx-local-cd.yaml@master"
+          echo "  (or rfcx-local-worker-cd.yaml for CronJob/worker images)"
+          echo ""
+          echo "To restore the old AWS behaviour, revert this file from git history."
+          exit 1
