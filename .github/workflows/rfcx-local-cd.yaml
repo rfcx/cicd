@@ -154,27 +154,40 @@ jobs:
       - name: 'Build + push'
         env:
           BUILD_CACHE: ${{ inputs.build-cache }}
+          ALL_TARGETS: ${{ inputs.targets }}
         run: |
           set -euo pipefail
 
           # Cache args are built as an ARRAY and are EMPTY unless build-cache is
           # true, so the default path is byte-for-byte the pre-2026-09-04 command.
           #
-          # Per-TARGET cache ref: the three arbimon targets share a `build` stage
-          # but end at different final stages, and `mode=max` records every stage
-          # in the ref. One shared ref would have the targets overwrite each
-          # other's manifest on every run (last writer wins) -- a per-target ref
-          # keeps each import stable while still hitting the shared lower layers,
-          # which are content-addressed and deduplicated by the registry anyway.
+          # EXPORT to a per-TARGET ref, IMPORT from EVERY target's ref.
+          #
+          # Export per target because `mode=max` records every stage in the
+          # manifest and one shared ref would have targets overwrite each other
+          # last-writer-wins. But import from ALL of them: targets in one run
+          # share lower stages (apt/yarn/pnpm deps, a common `build`), and the
+          # matrix runs SERIALLY on one runner, so build N can hit the stages
+          # build N-1 just exported -- WITHIN the same run. Importing only the
+          # own ref makes every target's FIRST run a full cold build even when
+          # a sibling finished the shared work seconds earlier. Measured on
+          # rfcx-api (4 targets, one shared `build` stage): with own-ref-only
+          # import, core-tasks built 4th at 140s with 1 CACHED step and
+          # `buildcache: not found`, while core-api had exported the identical
+          # shared stage 3 builds before. buildx treats each --cache-from as an
+          # independent source; a missing sibling ref is a harmless miss.
           #
           # ignore-error=true: a cache EXPORT failure (registry hiccup, GC race)
           # must never fail a deploy that has already built successfully.
           if [ "${BUILD_CACHE}" = "true" ]; then
             CACHE_REF="${REGISTRY}/${{ matrix.target }}:buildcache"
-            echo "Build cache ENABLED -> ${CACHE_REF}"
-            set -- \
-              --cache-from "type=registry,ref=${CACHE_REF}" \
-              --cache-to   "type=registry,ref=${CACHE_REF},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true"
+            echo "Build cache ENABLED -> export ${CACHE_REF}"
+            set -- --cache-to "type=registry,ref=${CACHE_REF},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true"
+            # every target in this run's matrix (own ref included)
+            for t in $(printf '%s' "${ALL_TARGETS}" | tr -d '[]"' | tr ',' ' '); do
+              echo "  import ${REGISTRY}/${t}:buildcache"
+              set -- "$@" --cache-from "type=registry,ref=${REGISTRY}/${t}:buildcache"
+            done
           else
             echo "Build cache disabled (default)"
             set --
