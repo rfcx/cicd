@@ -65,6 +65,37 @@ on:
         required: false
         type: number
         default: 600
+      build-cache:
+        description: |
+          Enable BuildKit layer caching via the in-cluster registry
+          (`--cache-to`/`--cache-from type=registry`, a `:buildcache` tag on
+          each target's own image repo, e.g.
+          `registry.data.svc.cluster.local:5000/biodiversity-api:buildcache`).
+
+          DEFAULT FALSE, DELIBERATELY. This workflow is shared by arbimon,
+          arbimon-legacy, rfcx-api, device-api and ingest-service, and every
+          caller pins `@master` -- so a default-on change would alter all five
+          repos' CD on their next merge simultaneously. Opting in per repo keeps
+          the blast radius to one caller at a time.
+
+          WHY IT HELPS (measured 2026-09-04 on rfcx/arbimon): the build matrix
+          runs on a SINGLE self-hosted runner (`rfcx-local-deployment-runner`,
+          replicas: 1) so targets build SERIALLY, and buildx's docker-container
+          driver is torn down per job, so nothing is cached between runs. A
+          3-target arbimon CD spent ~12.2 min of its ~14.5 min in three builds
+          of ~205-275s each, all recomputing the SAME shared `build` stage.
+
+          PROVEN against this registry (registry 2.8.3 + MinIO backend) before
+          shipping: cold build exported a cache manifest, and a FRESH
+          docker-container builder imported it (21s -> 2s, 2 CACHED layers) --
+          i.e. the cross-job case CI actually hits.
+
+          FAILS SAFE: cache-from on a missing/GC'd tag is a cache MISS, not an
+          error, so the build still succeeds (just slow). `ignore-error=true` on
+          cache-to means an export failure cannot fail a deploy.
+        required: false
+        type: boolean
+        default: false
 
 jobs:
   build:
@@ -121,8 +152,34 @@ jobs:
           echo "Building ${{ matrix.target }} as ${UNIQUE_TAG}..."
 
       - name: 'Build + push'
+        env:
+          BUILD_CACHE: ${{ inputs.build-cache }}
         run: |
           set -euo pipefail
+
+          # Cache args are built as an ARRAY and are EMPTY unless build-cache is
+          # true, so the default path is byte-for-byte the pre-2026-09-04 command.
+          #
+          # Per-TARGET cache ref: the three arbimon targets share a `build` stage
+          # but end at different final stages, and `mode=max` records every stage
+          # in the ref. One shared ref would have the targets overwrite each
+          # other's manifest on every run (last writer wins) -- a per-target ref
+          # keeps each import stable while still hitting the shared lower layers,
+          # which are content-addressed and deduplicated by the registry anyway.
+          #
+          # ignore-error=true: a cache EXPORT failure (registry hiccup, GC race)
+          # must never fail a deploy that has already built successfully.
+          if [ "${BUILD_CACHE}" = "true" ]; then
+            CACHE_REF="${REGISTRY}/${{ matrix.target }}:buildcache"
+            echo "Build cache ENABLED -> ${CACHE_REF}"
+            set -- \
+              --cache-from "type=registry,ref=${CACHE_REF}" \
+              --cache-to   "type=registry,ref=${CACHE_REF},mode=max,image-manifest=true,oci-mediatypes=true,ignore-error=true"
+          else
+            echo "Build cache disabled (default)"
+            set --
+          fi
+
           docker buildx build \
             --platform linux/arm64 \
             --file "${{ inputs.dockerfile }}" \
@@ -130,6 +187,7 @@ jobs:
             --tag "${REGISTRY}/${{ matrix.target }}:${{ steps.meta.outputs.unique-tag }}" \
             --tag "${REGISTRY}/${{ matrix.target }}:native-arm64-latest" \
             --tag "${REGISTRY}/${{ matrix.target }}:rfcx-local-prod-latest" \
+            "$@" \
             --output type=registry,registry.insecure=true \
             .
 
