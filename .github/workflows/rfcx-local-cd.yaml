@@ -46,7 +46,13 @@ on:
         required: true
         type: string
       deployments:
-        description: 'JSON array of {name, image} for apps-prod deployments to roll out'
+        description: |
+          JSON array of {name, image} for apps-prod workloads to roll out.
+          Optional per-entry `kind` selects the workload type: "deployment"
+          (default) or "cronjob". CronJobs have no rollout to wait on -- the
+          new image is picked up by the next scheduled run -- so they are
+          image-set only. Without this, CronJob pins have to be hand-rolled
+          with `kubectl set image` outside CI/CD.
         required: false
         type: string
         default: '[]'
@@ -232,12 +238,41 @@ jobs:
           set -euo pipefail
           DEPLOY_NAME="${{ matrix.entry.name }}"
           IMAGE_NAME="${{ matrix.entry.image }}"
+          KIND="${{ matrix.entry.kind || 'deployment' }}"
           UNIQUE_TAG="${{ needs.build.outputs.unique-tag }}"
-          CONTAINER_NAME=$(kubectl -n "${NAMESPACE}" get deploy "${DEPLOY_NAME}" \
-            -o jsonpath='{.spec.template.spec.containers[0].name}')
-          echo "Setting image for ${DEPLOY_NAME}/${CONTAINER_NAME} -> ${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
-          kubectl -n "${NAMESPACE}" set image "deployment/${DEPLOY_NAME}" \
-            "${CONTAINER_NAME}=${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
-          echo "Waiting for rollout (timeout ${ROLLOUT_TIMEOUT}s)..."
-          kubectl -n "${NAMESPACE}" rollout status "deployment/${DEPLOY_NAME}" --timeout="${ROLLOUT_TIMEOUT}s"
-          echo "::notice title=rfcx-local::${{ inputs.repo }}/${DEPLOY_NAME} rolled out to ${UNIQUE_TAG}"
+
+          case "${KIND}" in
+            deployment)
+              # containers[0] is the convention across apps-prod; a multi-container
+              # workload would need an explicit container name in the entry.
+              CONTAINER_NAME=$(kubectl -n "${NAMESPACE}" get deploy "${DEPLOY_NAME}" \
+                -o jsonpath='{.spec.template.spec.containers[0].name}')
+              echo "Setting image for deployment ${DEPLOY_NAME}/${CONTAINER_NAME} -> ${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
+              kubectl -n "${NAMESPACE}" set image "deployment/${DEPLOY_NAME}" \
+                "${CONTAINER_NAME}=${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
+              echo "Waiting for rollout (timeout ${ROLLOUT_TIMEOUT}s)..."
+              kubectl -n "${NAMESPACE}" rollout status "deployment/${DEPLOY_NAME}" --timeout="${ROLLOUT_TIMEOUT}s"
+              echo "::notice title=rfcx-local::${{ inputs.repo }}/${DEPLOY_NAME} rolled out to ${UNIQUE_TAG}"
+              ;;
+            cronjob)
+              CONTAINER_NAME=$(kubectl -n "${NAMESPACE}" get cronjob "${DEPLOY_NAME}" \
+                -o jsonpath='{.spec.jobTemplate.spec.template.spec.containers[0].name}')
+              echo "Setting image for cronjob ${DEPLOY_NAME}/${CONTAINER_NAME} -> ${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
+              kubectl -n "${NAMESPACE}" set image "cronjob/${DEPLOY_NAME}" \
+                "${CONTAINER_NAME}=${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}"
+              # A CronJob has no rollout to wait on; verify the pin took instead,
+              # so a silent no-op cannot pass as success.
+              APPLIED=$(kubectl -n "${NAMESPACE}" get cronjob "${DEPLOY_NAME}" \
+                -o jsonpath='{.spec.jobTemplate.spec.template.spec.containers[0].image}')
+              echo "CronJob image now: ${APPLIED}"
+              if [ "${APPLIED}" != "${REGISTRY}/${IMAGE_NAME}:${UNIQUE_TAG}" ]; then
+                echo "::error title=rfcx-local::${DEPLOY_NAME} image did not take (${APPLIED})"
+                exit 1
+              fi
+              echo "::notice title=rfcx-local::${{ inputs.repo }}/${DEPLOY_NAME} (cronjob) pinned to ${UNIQUE_TAG}; applies on next scheduled run"
+              ;;
+            *)
+              echo "::error title=rfcx-local::unknown kind '${KIND}' for ${DEPLOY_NAME} (expected deployment|cronjob)"
+              exit 1
+              ;;
+          esac
