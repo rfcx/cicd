@@ -102,6 +102,33 @@ on:
         required: false
         type: boolean
         default: false
+      build-args:
+        description: |
+          Extra `--build-arg` values for `docker buildx build`, ONE `KEY=VALUE`
+          PER LINE (blank lines ignored). Applied to EVERY target in the matrix.
+
+          DEFAULT EMPTY, DELIBERATELY -- same reasoning as `build-cache`: every
+          caller pins `@master`, so only an opt-in keeps the change to one repo
+          at a time. Empty => no `--build-arg` flag is added, i.e. the build
+          command is byte-for-byte what it was before this input existed.
+
+          WHY (2026-09-27, rfcx-local OPEN-ITEMS 412): rfcx/arbimon's Dockerfile
+          already declares `ARG release_commit` / `ARG release_date` and bakes
+          them into the website as VITE_RELEASE_COMMIT / VITE_RELEASE_DATE, but
+          this workflow passed no build args, so both were EMPTY in every
+          production image -- a post-ship check could not tell which build a
+          user's tab was running.
+
+          Each line is passed as ONE argv element (never through the shell), so
+          a value cannot inject further flags. A line without `=` fails the
+          build loudly rather than being silently dropped.
+
+          CACHE NOTE: a build arg only invalidates the layers of the stage that
+          declares it (and below). Pass a per-commit value only to a stage that
+          rebuilds on every commit anyway.
+        required: false
+        type: string
+        default: ''
 
 jobs:
   build:
@@ -160,6 +187,7 @@ jobs:
       - name: 'Build + push'
         env:
           BUILD_CACHE: ${{ inputs.build-cache }}
+          BUILD_ARGS: ${{ inputs.build-args }}
           ALL_TARGETS: ${{ inputs.targets }}
         run: |
           set -euo pipefail
@@ -199,6 +227,22 @@ jobs:
             set --
           fi
 
+          # Opt-in build args (input `build-args`). An EMPTY input yields an
+          # EMPTY array, which expands to NOTHING below -- the default command
+          # is unchanged. Each line becomes exactly one `--build-arg` argv
+          # element (no word-splitting, no globbing, no eval).
+          EXTRA_BUILD_ARGS=()
+          while IFS= read -r line || [ -n "${line}" ]; do
+            line="${line%$'\r'}"
+            [ -z "${line//[[:space:]]/}" ] && continue
+            case "${line}" in
+              *=*) ;;
+              *) echo "::error::build-args line is not KEY=VALUE: '${line}'"; exit 1 ;;
+            esac
+            echo "  build-arg ${line%%=*}"
+            EXTRA_BUILD_ARGS+=(--build-arg "${line}")
+          done <<< "${BUILD_ARGS}"
+
           docker buildx build \
             --platform linux/arm64 \
             --file "${{ inputs.dockerfile }}" \
@@ -207,6 +251,7 @@ jobs:
             --tag "${REGISTRY}/${{ matrix.target }}:native-arm64-latest" \
             --tag "${REGISTRY}/${{ matrix.target }}:rfcx-local-prod-latest" \
             "$@" \
+            "${EXTRA_BUILD_ARGS[@]}" \
             --output type=registry,registry.insecure=true \
             .
 
