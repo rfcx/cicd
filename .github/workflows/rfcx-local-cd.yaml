@@ -130,6 +130,25 @@ on:
         type: string
         default: ''
 
+    secrets:
+      npm-registry-token:
+        description: >
+          Optional read token for PRIVATE @rfcx/* npm packages on GitHub Packages
+          (npm.pkg.github.com; a classic token with read:packages). Passed to
+          `docker buildx build` as a BuildKit SECRET (`--secret id=npm_token`),
+          never a `--build-arg` -- build args persist in the image history; a
+          mounted secret exists only inside the RUN step that mounts it. The
+          Dockerfile opts in around its install step:
+            RUN --mount=type=secret,id=npm_token,required=true --mount=type=tmpfs,target=/npmauth \
+                printf '//npm.pkg.github.com/:_authToken=%s\n' "$(cat /run/secrets/npm_token)" > /npmauth/npmrc && \
+                NPM_CONFIG_USERCONFIG=/npmauth/npmrc NPM_CONFIG_CACHE=/npmauth/npm-cache yarn --frozen-lockfile
+          (npm 6 writes the auth header into its cache index, hence the tmpfs cache;
+          the repo's committed .npmrc carries ONLY `@rfcx:registry=...` -- a
+          `${NODE_AUTH_TOKEN}` placeholder there breaks every later yarn command.)
+          Empty/unset => no `--secret` flag is added, i.e. the build command is
+          byte-for-byte the previous one (every caller that does not pass it).
+        required: false
+
 jobs:
   build:
     name: 'rfcx-local build: ${{ matrix.target }}'
@@ -189,6 +208,7 @@ jobs:
           BUILD_CACHE: ${{ inputs.build-cache }}
           BUILD_ARGS: ${{ inputs.build-args }}
           ALL_TARGETS: ${{ inputs.targets }}
+          NPM_REGISTRY_TOKEN: ${{ secrets.npm-registry-token }}
         run: |
           set -euo pipefail
 
@@ -243,6 +263,15 @@ jobs:
             EXTRA_BUILD_ARGS+=(--build-arg "${line}")
           done <<< "${BUILD_ARGS}"
 
+          # Private npm registry token (secret `npm-registry-token`) as a BuildKit
+          # secret, present ONLY while a `RUN --mount=type=secret,id=npm_token` step
+          # runs. EMPTY => empty array => the command below is unchanged.
+          SECRET_ARGS=()
+          if [ -n "${NPM_REGISTRY_TOKEN:-}" ]; then
+            SECRET_ARGS+=(--secret "id=npm_token,env=NPM_REGISTRY_TOKEN")
+            echo "  secret npm_token: mounted for the build"
+          fi
+
           docker buildx build \
             --platform linux/arm64 \
             --file "${{ inputs.dockerfile }}" \
@@ -252,6 +281,7 @@ jobs:
             --tag "${REGISTRY}/${{ matrix.target }}:rfcx-local-prod-latest" \
             "$@" \
             "${EXTRA_BUILD_ARGS[@]}" \
+            "${SECRET_ARGS[@]}" \
             --output type=registry,registry.insecure=true \
             .
 
