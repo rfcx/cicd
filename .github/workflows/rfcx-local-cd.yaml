@@ -130,6 +130,22 @@ on:
         type: string
         default: ''
 
+    secrets:
+      git-read-token:
+        description: >
+          Optional GitHub token with READ access to private rfcx repos that the
+          app's `package.json` references as `github:rfcx/<repo>#<tag>`
+          dependencies (first consumer: rfcx/recording-metadata, made private
+          2026-11-05). Passed to `docker buildx build` as a BuildKit SECRET
+          (`--secret id=git_read_token`), never a `--build-arg` -- build args
+          persist in the image history; a mounted secret exists only for the
+          RUN step that mounts it. The Dockerfile opts in with
+          `RUN --mount=type=secret,id=git_read_token ...` around its install
+          step (see rfcx/rfcx-ingest-audio build/Dockerfile). Empty/unset =>
+          no `--secret` flag is added, i.e. the build is byte-for-byte the
+          previous command.
+        required: false
+
 jobs:
   build:
     name: 'rfcx-local build: ${{ matrix.target }}'
@@ -188,6 +204,7 @@ jobs:
         env:
           BUILD_CACHE: ${{ inputs.build-cache }}
           BUILD_ARGS: ${{ inputs.build-args }}
+          GIT_READ_TOKEN: ${{ secrets.git-read-token }}
           ALL_TARGETS: ${{ inputs.targets }}
         run: |
           set -euo pipefail
@@ -243,6 +260,15 @@ jobs:
             EXTRA_BUILD_ARGS+=(--build-arg "${line}")
           done <<< "${BUILD_ARGS}"
 
+          # Private-dependency read token (secret `git-read-token`): a BuildKit
+          # secret, present ONLY while a `RUN --mount=type=secret,id=git_read_token`
+          # step runs. EMPTY => no flag, identical command to before.
+          SECRET_ARGS=()
+          if [ -n "${GIT_READ_TOKEN:-}" ]; then
+            SECRET_ARGS+=(--secret "id=git_read_token,env=GIT_READ_TOKEN")
+            echo "  secret git_read_token: mounted for the build"
+          fi
+
           docker buildx build \
             --platform linux/arm64 \
             --file "${{ inputs.dockerfile }}" \
@@ -252,6 +278,7 @@ jobs:
             --tag "${REGISTRY}/${{ matrix.target }}:rfcx-local-prod-latest" \
             "$@" \
             "${EXTRA_BUILD_ARGS[@]}" \
+            "${SECRET_ARGS[@]}" \
             --output type=registry,registry.insecure=true \
             .
 
