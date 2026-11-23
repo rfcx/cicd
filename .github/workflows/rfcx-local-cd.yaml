@@ -190,6 +190,10 @@ jobs:
         uses: docker/setup-buildx-action@v3
         with:
           driver: docker-container
+          # CD build budget: put the BuildKit container under /ci-dind, which the runner's DinD creates and caps (8 GiB).
+          # Without this, buildx (cgroupfs) pins it to /docker/buildx -> the build VM's 4 Gi /docker cap (rfcx-local
+          # FINDING-2026-11-23-build-vm-docker-cap-catches-cd-buildx). A runner without /ci-dind still works (auto-created, uncapped).
+          driver-opts: cgroup-parent=/ci-dind
           buildkitd-config-inline: |
             [registry."registry.data.svc.cluster.local:5000"]
               http = true
